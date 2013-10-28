@@ -21,6 +21,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 	private NetworkNode selectedNode;
 	private NetworkConnection selectedConnection;
 	private int index;
+	private int textLocation;
 	private Graphics graphics;
 
 	public NetworkView(NetworkModel network) {
@@ -29,6 +30,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		this.selectedNode = null;
 		this.selectedConnection = null;
 		this.index = 0;
+		this.textLocation = -1;
 		this.graphics = null;
 
 		this.network.addNetworkViewListener(this);
@@ -58,12 +60,13 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 	@Override
 	public void processMouseEvent(MouseEvent evnt) {
 
-		if (evnt.getID() == MouseEvent.MOUSE_RELEASED || evnt.getID() == MouseEvent.MOUSE_PRESSED) {
+		if (evnt.getID() == MouseEvent.MOUSE_PRESSED) {
 			Point mouseLoc = evnt.getPoint();
 			GeometryDescriptor gd = pointGeometry(mouseLoc);
 
 			System.out.println(gd.toString());
 			if (gd.node != null) {
+				this.textLocation = gd.textLocation;
 				this.index = gd.index;
 				this.selectedNode = gd.node;
 				this.selectedConnection = null;
@@ -89,9 +92,9 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		for (int i = 0; i < this.network.nNodes(); i++) {
 			try {
 				if(this.selectedNode != null && this.index == i) {
-					paintNode(g, this.network.getNode(i), true);
+					paintNode(g, this.network.getNode(i), true, this.textLocation);
 				} else {
-					paintNode(g, this.network.getNode(i), false);
+					paintNode(g, this.network.getNode(i), false, -1);
 				}
 			} catch (Exception ex) {
 				Logger.getLogger(NetworkView.class.getName()).log(Level.SEVERE, null, ex);
@@ -142,7 +145,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 
 	private boolean containsPoint(NetworkConnection c, Point mouseLoc) {
 		int xMax, xMin, yMax, yMin;
-		Graphics g = this.getGraphics();
+		Graphics g = this.graphics;
 		XYPoints p = getXYPointsFromConnection(g, c);
 
 		if (p.x1 > p.x2) {
@@ -203,7 +206,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 
 	private int getTextLocation(NetworkNode n, Point mouseLoc) {
 
-		Graphics g = this.getGraphics();
+		Graphics g = this.graphics;
 
 		FontMetrics FM = g.getFontMetrics();
 		int textWidth = FM.stringWidth(n.getName());
@@ -235,7 +238,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 	private boolean containsPoint(NetworkNode n, Point mouseLoc) {
 		int xMax, xMin, yMax, yMin;
 
-		Graphics g = this.getGraphics();
+		Graphics g = this.graphics;
 
 		FontMetrics FM = g.getFontMetrics();
 		int textWidth = FM.stringWidth(n.getName());
@@ -249,15 +252,15 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		int margin = 10;
 
 		xMin = textLeft - margin;
-		xMax = xMin + (textWidth + margin * 2);
-		yMin = textTop - margin;
-		yMax = yMin + (textHeight + margin * 2);
+		xMax = xMin + (textWidth + (margin * 2));
+		yMin = textTop - margin / 2;
+		yMax = yMin + (textHeight + (margin * 2));
 
 		//Check bounding box
 		if (mouseLoc.getX() < xMin || mouseLoc.getX() > xMax || mouseLoc.getY() < yMin || mouseLoc.getY() > yMax) {
 			return false;
 		}
-
+		
 		//Check if inside actual oval
 		Point center = new Point(xMin + textWidth / 2 + margin, yMin + textHeight / 2 + margin);
 
@@ -279,7 +282,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		return true;
 	}
 
-	private void paintNode(Graphics g, NetworkNode n, boolean highlighted) {
+	private void paintNode(Graphics g, NetworkNode n, boolean highlighted, int textLocation) {
 		
 		if(highlighted) {
 			g.setColor(Color.blue);
@@ -292,12 +295,14 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		int textHeight = FM.getHeight();
 		int textLeft = (int) n.getX() - textWidth / 2;
 		int textRight = (int) n.getX() + textWidth / 2;
-
+		
 		int textBase = (int) n.getY() + FM.getHeight() / 2;
 		int textTop = (int) n.getY() - FM.getHeight() / 2;
-
-		g.drawString(n.getName(), (int) textLeft, (int) textBase);
-
+		
+		g.drawString(n.getName(), textLeft, textBase);
+		if(textLocation != -1) {
+			drawCourser(n.getName(), textLeft, textBase, textLocation);
+		}
 		int margin = 10;
 
 		int borderLeft = textLeft - margin;
@@ -306,6 +311,28 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		int borderHeight = textHeight + margin * 2;
 
 		g.drawOval(borderLeft, borderTop, borderWidth, borderHeight);
+	}
+	
+	private void drawCourser(String nodeName, int textLeft, int textBase, int textLocation) {
+		Graphics g = this.graphics;
+		g.setColor(Color.black);
+
+		FontMetrics FM = g.getFontMetrics();
+		textBase = textBase + 3;
+		//find character index
+		int xOffset = 0;
+		for (int i = 0; i < nodeName.length(); i++) {
+			if (textLocation == i) {
+				//draw bar at xOffset
+				int x = textLeft + xOffset;
+				int yMin = textBase - FM.getHeight();
+				g.drawLine(x, yMin, x, textBase);
+				break;
+			}
+			xOffset += FM.charWidth(nodeName.charAt(i));
+			
+		}
+		g.setColor(Color.blue);
 	}
 
 	private void paintConnection(Graphics g, NetworkConnection c, boolean highlighted) {
