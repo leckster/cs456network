@@ -37,6 +37,20 @@ public class NetworkConnection {
 		this.side2 = side2;
 	}
 	
+	public String getNodeOne() {
+		return node1;
+	}
+	public String getNodeTwo() {
+		return node2;
+	}
+	
+	public void setNodeOne(String node) {
+		this.node1 = node;
+	}
+	public void setNodeTow(String node) {
+		this.node2 = node;
+	}
+	
 	@Override
 	public String toString() {
 		return "C \""+this.node1+"\" "+getSideString(this.side1)+" \""+this.node2+"\" "+getSideString(this.side2);

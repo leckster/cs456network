@@ -48,6 +48,7 @@ public class NetworkNode {
 	 */
 	public void setName(String newName) {
 		this.name = newName;
+		alertModel();
 	}
 
 	/**
@@ -70,6 +71,7 @@ public class NetworkNode {
 	public void setLocation(double xCenter, double yCenter) {
 		this.xCenter = xCenter;
 		this.yCenter = yCenter;
+		alertModel();
 	}
 
 	/**
@@ -79,6 +81,7 @@ public class NetworkNode {
 	 */
 	public void setNetwork(NetworkModel network) {
 		this.network = network;
+		alertModel();
 	}
 
 	/**
@@ -86,5 +89,9 @@ public class NetworkNode {
 	 */
 	public NetworkModel getNetwork() {
 		return this.network;
+	}
+	
+	private void alertModel() {
+		this.network.update();
 	}
 }

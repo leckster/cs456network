@@ -11,12 +11,16 @@ package network;
  */
 class GeometryDescriptor {
 	
+	public enum Type { CONNECTION, NODE };
+	
+	Type type;
 	NetworkConnection connection;
 	NetworkNode node;
 	int textLocation;
 	int index;
 	
 	public GeometryDescriptor() {
+		type = null;
 		connection = null;
 		node = null;
 		textLocation = -1;
@@ -29,6 +33,7 @@ class GeometryDescriptor {
 	}
 
 	GeometryDescriptor(NetworkConnection c, int i) {
+		type = Type.CONNECTION;
 		connection = c;
 		node = null;
 		textLocation = 0;
@@ -36,6 +41,7 @@ class GeometryDescriptor {
 	}
 
 	GeometryDescriptor(NetworkNode n, int textLoc, int i) {
+		type = Type.NODE;
 		connection = null;
 		node = n;
 		textLocation = textLoc;

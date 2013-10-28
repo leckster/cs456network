@@ -7,6 +7,8 @@ package network;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.event.WindowEvent;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JFrame;
 
 /**
@@ -34,8 +36,8 @@ public class Network extends Component {
 		try {
 			network = new NetworkModel(fileName);
 		} catch (Exception ex) {
-			//Logger.getLogger(Network.class.getName()).log(Level.SEVERE, null, ex);
-			System.out.println("Invald file name.");
+			Logger.getLogger(Network.class.getName()).log(Level.SEVERE, null, ex);
+			System.out.println("Invalid file name: " + fileName);
 			return;
 		}
 		
