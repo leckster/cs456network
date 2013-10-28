@@ -23,6 +23,10 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 	private NetworkConnection selectedConnection;
 	private int index;
 	private int textLocation;
+	private Point mousePressLocation;
+	private Point offsetPoint;
+	private int xOffset;
+	private int yOffset;
 	private Graphics graphics;
 
 	public NetworkView(NetworkModel network) {
@@ -49,30 +53,52 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 
 	@Override
 	public void processKeyEvent(KeyEvent evnt) {
-		if (evnt.getID() == KeyEvent.KEY_TYPED) {
-			if (textLocation != -1) {
-				//insert key that is pressed into location.
-				insertCharacter(evnt.getKeyChar());
-			}
-		}
 		
+		boolean backspace = false;
 		if (evnt.getID() == KeyEvent.KEY_PRESSED) {
-			if(textLocation != -1){
-				if (evnt.getKeyCode() == 37) {
-					System.out.println("Left");
-					if(textLocation > 0) {
+			if (textLocation != -1) {
+				if (evnt.getKeyCode() == 8) {//delete backspaces
+					deleteCharacter();
+					backspace = true;
+				} else if (evnt.getKeyCode() <= 91 && evnt.getKeyCode() >= 65 || evnt.getKeyCode() == 32) { //'a' through 'z' and 'spacebar'
+					insertCharacter(evnt.getKeyChar());
+				}
+				
+				if (evnt.getKeyCode() == 37) { // Left Arrow
+					if (textLocation > 0) {
 						textLocation--;
 					}
 					this.repaint();
 				}
-				if (evnt.getKeyCode() == 39) {
-					System.out.println("Right");
-					if(textLocation < this.selectedNode.getName().length()) {
+				if (evnt.getKeyCode() == 39) { // Right Arrow
+					if (textLocation < this.selectedNode.getName().length()) {
 						textLocation++;
 					}
 					this.repaint();
 				}
 			}
+		}
+	}
+
+	private void deleteCharacter() {
+		try {
+			if(this.textLocation > 0) {
+				String nodeName = this.network.getNode(this.index).getName();
+				String newNodeName = new StringBuilder(nodeName).deleteCharAt(this.textLocation - 1).toString();
+				for (int i = 0; i < this.network.nConnections(); i++) {
+					NetworkConnection conn = this.network.getConnection(i);
+					if (conn.getNodeOne().equals(nodeName)) {
+						conn.setNodeOne(newNodeName);
+					}
+					if (conn.getNodeTwo().equals(nodeName)) {
+						conn.setNodeTwo(newNodeName);
+					}
+				}
+				this.network.getNode(index).setName(newNodeName);
+				this.textLocation--;
+			}
+		} catch (Exception ex) {
+			Logger.getLogger(NetworkView.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
 
@@ -95,7 +121,6 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		} catch (Exception ex) {
 			Logger.getLogger(NetworkView.class.getName()).log(Level.SEVERE, null, ex);
 		}
-
 	}
 
 	@Override
@@ -103,10 +128,16 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		if (evnt.getID() == MouseEvent.MOUSE_DRAGGED) {
 			//if there is a selected node. Update location to new loc
 			if (this.selectedNode != null) {
-				Point mouseLoc = evnt.getPoint();
-				//System.out.println("Mouse Dragged to :" + mouseLoc.toString());
-				//set node location to be new mouseLoc
-				this.network.setNewNodeLocation(this.index, mouseLoc.x, mouseLoc.y);
+				if (this.mousePressLocation.distance(evnt.getPoint()) > 3) {
+					if(this.offsetPoint == null) {
+						this.offsetPoint = evnt.getPoint();
+						this.xOffset = (int) this.selectedNode.getX() - this.offsetPoint.x;
+						this.yOffset = (int) this.selectedNode.getY() - this.offsetPoint.y;
+
+					}
+					Point mouseLoc = evnt.getPoint();
+					this.network.setNewNodeLocation(this.index, mouseLoc.x + xOffset, mouseLoc.y + yOffset);
+				}
 			}
 		}
 	}
@@ -115,6 +146,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 	public void processMouseEvent(MouseEvent evnt) {
 
 		if (evnt.getID() == MouseEvent.MOUSE_PRESSED) {
+			this.mousePressLocation = evnt.getPoint();
 			Point mouseLoc = evnt.getPoint();
 			GeometryDescriptor gd = pointGeometry(mouseLoc);
 
@@ -133,6 +165,10 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 				this.selectedNode = null;
 			}
 			this.repaint();
+		}
+		
+		if (evnt.getID() == MouseEvent.MOUSE_RELEASED) {
+			this.offsetPoint = null;
 		}
 
 	}
