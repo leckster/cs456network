@@ -47,7 +47,7 @@ public class NetworkConnection {
 	public void setNodeOne(String node) {
 		this.node1 = node;
 	}
-	public void setNodeTow(String node) {
+	public void setNodeTwo(String node) {
 		this.node2 = node;
 	}
 	

@@ -21,17 +21,15 @@ public class Network extends Component {
 	 * @param args the command line arguments
 	 */
 	public static void main(String[] args) {
-		
-		if(args.length > 1) {
+
+		if (args.length > 1) {
 			NetworkModel.Test();
 		}
-		
+
 		String fileName = args[0];
-		
-		
+
 		JFrame F = new JFrame("Showing Network from file:" + fileName);
-		
-		
+
 		NetworkModel network = null;
 		try {
 			network = new NetworkModel(fileName);
@@ -40,23 +38,19 @@ public class Network extends Component {
 			System.out.println("Invalid file name: " + fileName);
 			return;
 		}
-		
+
 		NetworkView view = new NetworkView(network);
-		
+
 		F.add(view);
-		
+
 		F.setBounds(100, 100, 1000, 600);
 		F.addWindowListener(
-			new WindowAdapter()
-			{
-				public void windowClosing(WindowEvent evt)
-				{
-					System.exit(0);
-				}
+				new WindowAdapter() {
+			public void windowClosing(WindowEvent evt) {
+				System.exit(0);
 			}
-		);
+		});
 		F.setVisible(true);
-		
+
 	}
-	
 }

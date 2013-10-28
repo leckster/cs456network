@@ -5,6 +5,7 @@
 package network;
 
 import java.awt.*;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -34,14 +35,67 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		this.graphics = null;
 
 		this.network.addNetworkViewListener(this);
-		
+
+		setFocusable(true);
 		enableEvents(AWTEvent.MOUSE_EVENT_MASK);
 		enableEvents(AWTEvent.MOUSE_MOTION_EVENT_MASK);
+		enableEvents(AWTEvent.KEY_EVENT_MASK);
 	}
 
 	@Override
 	public void updateView() {
 		this.repaint();
+	}
+
+	@Override
+	public void processKeyEvent(KeyEvent evnt) {
+		if (evnt.getID() == KeyEvent.KEY_TYPED) {
+			if (textLocation != -1) {
+				//insert key that is pressed into location.
+				insertCharacter(evnt.getKeyChar());
+			}
+		}
+		
+		if (evnt.getID() == KeyEvent.KEY_PRESSED) {
+			if(textLocation != -1){
+				if (evnt.getKeyCode() == 37) {
+					System.out.println("Left");
+					if(textLocation > 0) {
+						textLocation--;
+					}
+					this.repaint();
+				}
+				if (evnt.getKeyCode() == 39) {
+					System.out.println("Right");
+					if(textLocation < this.selectedNode.getName().length()) {
+						textLocation++;
+					}
+					this.repaint();
+				}
+			}
+		}
+	}
+
+	private void insertCharacter(char character) {
+		try {
+			String nodeName = this.network.getNode(this.index).getName();
+			String newNodeName = new StringBuilder(nodeName).insert(this.textLocation, character).toString();
+			for (int i = 0; i < this.network.nConnections(); i++) {
+				NetworkConnection conn = this.network.getConnection(i);
+				if (conn.getNodeOne().equals(nodeName)) {
+					conn.setNodeOne(newNodeName);
+				}
+				if (conn.getNodeTwo().equals(nodeName)) {
+					conn.setNodeTwo(newNodeName);
+				}
+			}
+			this.network.getNode(index).setName(newNodeName);
+			this.textLocation++;
+
+		} catch (Exception ex) {
+			Logger.getLogger(NetworkView.class.getName()).log(Level.SEVERE, null, ex);
+		}
+
 	}
 
 	@Override
@@ -88,10 +142,10 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		super.paint(g);
 
 		this.graphics = g;
-		
+
 		for (int i = 0; i < this.network.nNodes(); i++) {
 			try {
-				if(this.selectedNode != null && this.index == i) {
+				if (this.selectedNode != null && this.index == i) {
 					paintNode(g, this.network.getNode(i), true, this.textLocation);
 				} else {
 					paintNode(g, this.network.getNode(i), false, -1);
@@ -102,7 +156,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		}
 		for (int i = 0; i < this.network.nConnections(); i++) {
 			try {
-				if(this.selectedConnection != null && this.index == i) {
+				if (this.selectedConnection != null && this.index == i) {
 					paintConnection(g, this.network.getConnection(i), true);
 				} else {
 					paintConnection(g, this.network.getConnection(i), false);
@@ -260,7 +314,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		if (mouseLoc.getX() < xMin || mouseLoc.getX() > xMax || mouseLoc.getY() < yMin || mouseLoc.getY() > yMax) {
 			return false;
 		}
-		
+
 		//Check if inside actual oval
 		Point center = new Point(xMin + textWidth / 2 + margin, yMin + textHeight / 2 + margin);
 
@@ -283,24 +337,24 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 	}
 
 	private void paintNode(Graphics g, NetworkNode n, boolean highlighted, int textLocation) {
-		
-		if(highlighted) {
+
+		if (highlighted) {
 			g.setColor(Color.blue);
 		} else {
 			g.setColor(Color.black);
 		}
-		
+
 		FontMetrics FM = g.getFontMetrics();
 		int textWidth = FM.stringWidth(n.getName());
 		int textHeight = FM.getHeight();
 		int textLeft = (int) n.getX() - textWidth / 2;
 		int textRight = (int) n.getX() + textWidth / 2;
-		
+
 		int textBase = (int) n.getY() + FM.getHeight() / 2;
 		int textTop = (int) n.getY() - FM.getHeight() / 2;
-		
+
 		g.drawString(n.getName(), textLeft, textBase);
-		if(textLocation != -1) {
+		if (textLocation != -1) {
 			drawCourser(n.getName(), textLeft, textBase, textLocation);
 		}
 		int margin = 10;
@@ -312,7 +366,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 
 		g.drawOval(borderLeft, borderTop, borderWidth, borderHeight);
 	}
-	
+
 	private void drawCourser(String nodeName, int textLeft, int textBase, int textLocation) {
 		Graphics g = this.graphics;
 		g.setColor(Color.black);
@@ -321,7 +375,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		textBase = textBase + 3;
 		//find character index
 		int xOffset = 0;
-		for (int i = 0; i < nodeName.length(); i++) {
+		for (int i = 0; i <= nodeName.length(); i++) {
 			if (textLocation == i) {
 				//draw bar at xOffset
 				int x = textLeft + xOffset;
@@ -330,22 +384,22 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 				break;
 			}
 			xOffset += FM.charWidth(nodeName.charAt(i));
-			
+
 		}
 		g.setColor(Color.blue);
 	}
 
 	private void paintConnection(Graphics g, NetworkConnection c, boolean highlighted) {
-		
-		if(highlighted) {
+
+		if (highlighted) {
 			g.setColor(Color.blue);
 		} else {
 			g.setColor(Color.black);
 		}
-		
-		
+
+
 		XYPoints p = getXYPointsFromConnection(g, c);
-		
+
 		g.drawLine(p.x1, p.y1, p.x2, p.y2);
 	}
 
