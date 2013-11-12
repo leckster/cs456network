@@ -174,13 +174,15 @@ public class NetworkViewController extends JPanel implements ActionListener {
 	private void makeNewNetwork(String absolutePath) {
 		this.fileName = absolutePath;
 		network.saveToNewLocation(fileName);
+		if(network.numberOfNetworkListeners() == 1) {
+			NetworkModels.removeModel(network.getFileName());
+		}
 		try {
 			network = new NetworkModel(fileName);
 			network.save();
 			view.changeNetwork(network);
-			System.out.println(NetworkModels.getCoutForKey(fileName));
 			NetworkModels.addModel(fileName, network);
-			System.out.println(NetworkModels.getCoutForKey(fileName));
+			NetworkModels.printMap();
 		} catch (Exception ex) {
 			Logger.getLogger(NetworkViewController.class.getName()).log(Level.SEVERE, null, ex);
 		}
