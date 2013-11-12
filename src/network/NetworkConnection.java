@@ -53,7 +53,7 @@ public class NetworkConnection {
 	
 	@Override
 	public String toString() {
-		return "C \""+this.node1+"\" "+getSideString(this.side1)+" \""+this.node2+"\" "+getSideString(this.side2);
+		return "C \""+this.node1+"\" "+getSideString(this.side1)+" \""+this.node2+"\" "+getSideString(this.side2) + "\r\n";
 	}
 	
 	private String getSideString(Side s) {

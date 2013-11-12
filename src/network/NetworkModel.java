@@ -53,7 +53,7 @@ public class NetworkModel {
 			networkListeners.get(i).updateView();
 		}
 	}
-	
+
 	public void setNewNodeLocation(int index, int x, int y) {
 		this.changesSaved = false;
 		this.nodes.get(index).setLocation(x, y);
@@ -61,11 +61,24 @@ public class NetworkModel {
 
 	/**
 	 * adds a network view to the list of listeners.
-	 * 
+	 *
 	 * @param newView
 	 */
 	public void addNetworkViewListener(NetworkViewInterface newView) {
 		this.networkListeners.add(newView);
+	}
+
+	/**
+	 * removes a network view from the list of listeners
+	 *
+	 * @param view
+	 */
+	public void removeNetworkViewListener(NetworkViewInterface view) {
+		this.networkListeners.remove(view);
+	}
+
+	public int numberOfNetworkListeners() {
+		return this.networkListeners.size();
 	}
 
 	private String getUniqueName() {
@@ -190,20 +203,43 @@ public class NetworkModel {
 	 */
 	public void save() {
 		try {
-			FileWriter writer = new FileWriter(this.filename);
+			System.out.println("Writing to file: " + this.filename);
+			FileWriter writer = new FileWriter(new File(this.filename), false);
 			for (int i = 0; i < this.nodes.size(); i++) {
 				NetworkNode node = this.nodes.get(i);
 				writer.write(node.toString());
+				System.out.println(node.toString());
 			}
 			for (int i = 0; i < this.connections.size(); i++) {
 				NetworkConnection connection = this.connections.get(i);
 				writer.write(connection.toString());
+				System.out.println(connection.toString());
+			}
+			writer.close();
+			this.changesSaved = true;
+		} catch (IOException ex) {
+			Logger.getLogger(NetworkModel.class.getName()).log(Level.SEVERE, null, ex);
+		}
+	}
+	
+	public void saveToNewLocation(String absolutePath) {
+		try {
+			System.out.println("Writing to file: " + absolutePath);
+			FileWriter writer = new FileWriter(new File(absolutePath), false);
+			for (int i = 0; i < this.nodes.size(); i++) {
+				NetworkNode node = this.nodes.get(i);
+				writer.write(node.toString());
+				System.out.println(node.toString());
+			}
+			for (int i = 0; i < this.connections.size(); i++) {
+				NetworkConnection connection = this.connections.get(i);
+				writer.write(connection.toString());
+				System.out.println(connection.toString());
 			}
 			writer.close();
 		} catch (IOException ex) {
 			Logger.getLogger(NetworkModel.class.getName()).log(Level.SEVERE, null, ex);
 		}
-		this.changesSaved = true;
 	}
 
 	/**

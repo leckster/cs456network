@@ -5,11 +5,7 @@
 package network;
 
 import java.awt.*;
-import java.awt.event.*;
-import java.awt.event.WindowEvent;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.swing.JFrame;
+import java.util.Map;
 
 /**
  *
@@ -28,29 +24,8 @@ public class Network extends Component {
 
 		String fileName = args[0];
 
-		JFrame F = new JFrame("Showing Network from file:" + fileName);
-
-		NetworkModel network = null;
-		try {
-			network = new NetworkModel(fileName);
-		} catch (Exception ex) {
-			Logger.getLogger(Network.class.getName()).log(Level.SEVERE, null, ex);
-			System.out.println("Invalid file name: " + fileName);
-			return;
-		}
-
-		NetworkView view = new NetworkView(network);
-
-		F.add(view);
-
-		F.setBounds(100, 100, 1000, 600);
-		F.addWindowListener(
-				new WindowAdapter() {
-			public void windowClosing(WindowEvent evt) {
-				System.exit(0);
-			}
-		});
-		F.setVisible(true);
+		NetworkViewController NVC = new NetworkViewController(fileName);
+		NetworkViewController NVC2 = new NetworkViewController(fileName);
 
 	}
 }

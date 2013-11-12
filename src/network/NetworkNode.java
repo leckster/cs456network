@@ -31,7 +31,7 @@ public class NetworkNode {
 	
 	@Override
 	public String toString() {
-		return "N "+this.xCenter+" "+this.yCenter+" \""+this.name+"\" ";
+		return "N "+this.xCenter+" "+this.yCenter+" \""+this.name+"\" \r\n";
 	}
 
 	/**

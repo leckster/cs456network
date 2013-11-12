@@ -45,6 +45,12 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		enableEvents(AWTEvent.MOUSE_MOTION_EVENT_MASK);
 		enableEvents(AWTEvent.KEY_EVENT_MASK);
 	}
+	
+	public void changeNetwork(NetworkModel network) {
+		this.network.removeNetworkViewListener(this);
+		this.network = network;
+		this.network.addNetworkViewListener(this);
+	}
 
 	@Override
 	public void updateView() {
