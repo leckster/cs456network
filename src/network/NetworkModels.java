@@ -9,7 +9,6 @@ import java.util.HashMap;
 public class NetworkModels {
 
 	private static HashMap<String, NetworkModel> currentNetworks = new HashMap<>();
-	private static HashMap<String, Integer> numberOfNetworks = new HashMap<>();
 
 	public static boolean modelExists(String fileName) {
 		return currentNetworks.containsKey(fileName);
@@ -21,36 +20,19 @@ public class NetworkModels {
 
 	public static void addModel(String fileName, NetworkModel model) {
 		currentNetworks.put(fileName, model);
-		Integer count = numberOfNetworks.get(fileName);
-		if (count != null) {
-			count += 1;
-		} else {
-			count = 1;
-		}
-		numberOfNetworks.put(fileName, count);
 	}
 
 	public static void removeModel(String fileName) {
 		currentNetworks.remove(fileName);
-		Integer count = numberOfNetworks.get(fileName);
-		if (count != null && count > 0) {
-			count -= 1;
-		} else {
-			count = 0;
-		}
-		numberOfNetworks.put(fileName, count);
-	}
-	
-	public static int getCoutForKey(String fileName) {
-		Integer count = numberOfNetworks.get(fileName);
-		if (count != null) {
-			return count;
-		} else {
-			return 0;
-		}
 	}
 
 	public static boolean noMoreModels() {
 		return currentNetworks.isEmpty();
+	}
+
+	public static void printMap() {
+		for (String key : currentNetworks.keySet()) {
+			System.out.println(key + " : " + currentNetworks.get(key).toString());
+		}
 	}
 }
