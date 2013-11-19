@@ -455,11 +455,11 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		int[] xPoints = {p.x1, p.x2, c1x, c2x};
 		int[] yPoints = {p.y1, p.y2, c1y, c2y};
 
-		xMax = max(xPoints);
-		xMin = min(xPoints);
+		xMax = max(xPoints) + 3;
+		xMin = min(xPoints) - 3;
 
-		yMax = max(yPoints);
-		yMin = min(yPoints);
+		yMax = max(yPoints) + 3;
+		yMin = min(yPoints) - 3;
 
 //		System.out.println("X-min: " + xMin);
 //		System.out.println("X-max: " + xMax);
