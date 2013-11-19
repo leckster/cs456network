@@ -4,15 +4,22 @@
  */
 package network;
 
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.io.IOException;
+import java.net.URL;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.imageio.ImageIO;
 import javax.swing.*;
+import network.NetworkView.Mode;
 
 /**
  *
@@ -49,6 +56,25 @@ public class NetworkViewController extends JPanel implements ActionListener {
 		menu.add(saveAs);
 		menuBar.add(menu);
 		F.setJMenuBar(menuBar);
+
+
+		JPanel buttonPanel = new JPanel();
+		buttonPanel.setPreferredSize(new Dimension(80, F.getHeight()));
+		JButton selectMode = makeNavigationButton("cursor", "selectMode",
+				"Enter Select Mode",
+				"Select");
+		JButton drawNodeMode = makeNavigationButton("oval", "drawNodeMode",
+				"Draw a new Node",
+				"New Node");
+		JButton drawConnectionMode = makeNavigationButton("curve", "drawConnectionMode",
+				"Draw a new Connection",
+				"New Connection");
+
+		buttonPanel.add(selectMode);
+		buttonPanel.add(drawNodeMode);
+		buttonPanel.add(drawConnectionMode);
+
+		F.add(buttonPanel, BorderLayout.WEST);
 
 		if (NetworkModels.modelExists(fileName)) {
 			System.out.println("Model Exists: " + fileName);
@@ -123,9 +149,50 @@ public class NetworkViewController extends JPanel implements ActionListener {
 
 	}
 
+	private JButton makeNavigationButton(String imageName,
+			String actionCommand,
+			String toolTipText,
+			String altText) {
+		//Look for the image.
+		String imgLocation = "resources/"
+				+ imageName
+				+ ".png";
+		URL imageURL = NetworkViewController.class.getResource(imgLocation);
+
+		//Create and initialize the button.
+		JButton button = new JButton();
+		button.setActionCommand(actionCommand);
+		button.setToolTipText(toolTipText);
+		button.addActionListener(this);
+		button.setSize(25, 25);
+
+		//button.setBorderPainted(false);
+		//button.setContentAreaFilled(false);
+		//button.setFocusPainted(false);
+		//button.setOpaque(false);
+		button.setFocusable(false);
+
+		if (imageURL != null) {//image found
+			try {
+				Image im = ImageIO.read(new File(imageURL.getFile()));
+				ImageIcon img = new ImageIcon();
+				img.setImage(im.getScaledInstance(25, 25, java.awt.Image.SCALE_SMOOTH));
+				button.setIcon(img);
+			} catch (IOException ex) {
+				Logger.getLogger(NetworkViewController.class.getName()).log(Level.SEVERE, null, ex);
+			}
+		} else {                                     //no image found
+			button.setText(altText);
+			System.err.println("Resource not found: " + imgLocation);
+		}
+
+		return button;
+	}
+
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		String command = e.getActionCommand();
+		System.out.println(e.paramString());
 		switch (command) {
 			case "Open":
 				this.openFile();
@@ -136,10 +203,23 @@ public class NetworkViewController extends JPanel implements ActionListener {
 			case "Save As":
 				this.saveAsFile();
 				break;
+			case "selectMode":
+				this.changeMode(Mode.Select);
+				break;
+			case "drawNodeMode":
+				this.changeMode(Mode.AddNode);
+				break;
+			case "drawConnectionMode":
+				this.changeMode(Mode.AddConnection);
+				break;
 			default:
 
 				break;
 		}
+	}
+
+	private void changeMode(Mode mode) {
+		this.view.setMode(mode);
 	}
 
 	private void openFile() {
@@ -174,7 +254,7 @@ public class NetworkViewController extends JPanel implements ActionListener {
 	private void makeNewNetwork(String absolutePath) {
 		this.fileName = absolutePath;
 		network.saveToNewLocation(fileName);
-		if(network.numberOfNetworkListeners() == 1) {
+		if (network.numberOfNetworkListeners() == 1) {
 			NetworkModels.removeModel(network.getFileName());
 		}
 		try {

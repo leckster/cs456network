@@ -1,9 +1,8 @@
-N 100 200 "Central"
-N 200 400 "Authentication server"
-N 500 300 "Choo Choo"
-N 400 400 "Emily Gunter"
-N 500 500 "Leckie Gunter"
-C "Central" R "Authentication server" T
+N 61.0 63.0 "Central" 
+N 263.0 143.0 "Authentication Server" 
+N 161.0 231.0 "Choo Choo" 
+C "Central" R "Authentication Server" T
 C "Choo Choo" L "Central" B
-C "Leckie Gunter" T "Emily Gunter" B
-C "Leckie Gunter" T "Emily Gunter" R
+C "Central" T "Authentication Server" T
+C "Central" T "Authentication Server" R
+C "Central" B "Choo Choo" T

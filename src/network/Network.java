@@ -5,7 +5,6 @@
 package network;
 
 import java.awt.*;
-import java.util.Map;
 
 /**
  *
@@ -25,7 +24,7 @@ public class Network extends Component {
 		String fileName = args[0];
 
 		NetworkViewController NVC = new NetworkViewController(fileName);
-		NetworkViewController NVC2 = new NetworkViewController(fileName);
+//		NetworkViewController NVC2 = new NetworkViewController(fileName);
 
 	}
 }

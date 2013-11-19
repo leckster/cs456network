@@ -7,6 +7,8 @@ package network;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.awt.geom.GeneralPath;
+import java.awt.geom.Path2D;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.*;
@@ -18,6 +20,12 @@ import network.NetworkConnection.Side;
  */
 public class NetworkView extends JPanel implements NetworkViewInterface {
 
+	public enum Mode {
+
+		Select,
+		AddNode,
+		AddConnection
+	}
 	private NetworkModel network;
 	private NetworkNode selectedNode;
 	private NetworkConnection selectedConnection;
@@ -25,9 +33,14 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 	private int textLocation;
 	private Point mousePressLocation;
 	private Point offsetPoint;
+	private NetworkNode connectionFirstNode;
+	private Side connectionFirstSide;
+	private Point dragToLocation;
+	private Side dragToSide = Side.Left;
 	private int xOffset;
 	private int yOffset;
 	private Graphics graphics;
+	private Mode mode;
 
 	public NetworkView(NetworkModel network) {
 
@@ -45,11 +58,21 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		enableEvents(AWTEvent.MOUSE_MOTION_EVENT_MASK);
 		enableEvents(AWTEvent.KEY_EVENT_MASK);
 	}
-	
+
 	public void changeNetwork(NetworkModel network) {
 		this.network.removeNetworkViewListener(this);
 		this.network = network;
 		this.network.addNetworkViewListener(this);
+	}
+
+	void setMode(Mode mode) {
+		if (this.mode != mode) {
+			System.out.println("Mode changed to: " + mode);
+			this.mode = mode;
+			this.selectedNode = null;
+			this.selectedConnection = null;
+			this.repaint();
+		}
 	}
 
 	@Override
@@ -59,17 +82,15 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 
 	@Override
 	public void processKeyEvent(KeyEvent evnt) {
-		
-		boolean backspace = false;
-		if (evnt.getID() == KeyEvent.KEY_PRESSED) {
+
+		if (evnt.getID() == KeyEvent.KEY_PRESSED && this.mode == Mode.Select) {
 			if (textLocation != -1) {
 				if (evnt.getKeyCode() == 8) {//delete backspaces
 					deleteCharacter();
-					backspace = true;
 				} else if (evnt.getKeyCode() <= 91 && evnt.getKeyCode() >= 65 || evnt.getKeyCode() == 32) { //'a' through 'z' and 'spacebar'
 					insertCharacter(evnt.getKeyChar());
 				}
-				
+
 				if (evnt.getKeyCode() == 37) { // Left Arrow
 					if (textLocation > 0) {
 						textLocation--;
@@ -88,7 +109,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 
 	private void deleteCharacter() {
 		try {
-			if(this.textLocation > 0) {
+			if (this.textLocation > 0) {
 				String nodeName = this.network.getNode(this.index).getName();
 				String newNodeName = new StringBuilder(nodeName).deleteCharAt(this.textLocation - 1).toString();
 				for (int i = 0; i < this.network.nConnections(); i++) {
@@ -132,51 +153,204 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 	@Override
 	public void processMouseMotionEvent(MouseEvent evnt) {
 		if (evnt.getID() == MouseEvent.MOUSE_DRAGGED) {
-			//if there is a selected node. Update location to new loc
-			if (this.selectedNode != null) {
-				if (this.mousePressLocation.distance(evnt.getPoint()) > 3) {
-					if(this.offsetPoint == null) {
-						this.offsetPoint = evnt.getPoint();
-						this.xOffset = (int) this.selectedNode.getX() - this.offsetPoint.x;
-						this.yOffset = (int) this.selectedNode.getY() - this.offsetPoint.y;
+			if (this.mode == Mode.Select) {
+				//if there is a selected node. Update location to new loc
+				if (this.selectedNode != null) {
+					if (this.mousePressLocation.distance(evnt.getPoint()) > 3) {
+						if (this.offsetPoint == null) {
+							this.offsetPoint = evnt.getPoint();
+							this.xOffset = (int) this.selectedNode.getX() - this.offsetPoint.x;
+							this.yOffset = (int) this.selectedNode.getY() - this.offsetPoint.y;
 
+						}
+						Point mouseLoc = evnt.getPoint();
+						this.network.setNewNodeLocation(this.index, mouseLoc.x + xOffset, mouseLoc.y + yOffset);
 					}
-					Point mouseLoc = evnt.getPoint();
-					this.network.setNewNodeLocation(this.index, mouseLoc.x + xOffset, mouseLoc.y + yOffset);
 				}
+			} else if (this.mode == Mode.AddConnection) {
+				this.dragToLocation = evnt.getPoint();
+				Point mouseLoc = evnt.getPoint();
+				for (int i = this.network.nNodes() - 1; i >= 0; i--) {
+					NetworkNode node = this.network.getNode(i);
+					if (isCloseEnoughToNode(node, mouseLoc)) {
+						Side side = getConnectionSide(node, mouseLoc);
+						if (side != null) {
+							System.out.println("Setting New Drag To Side: " + side.name());
+							this.dragToSide = side;
+							break;
+						}
+					}
+				}
+				this.repaint();
+				//TODO. add logic for when dragging while adding a connection
 			}
 		}
 	}
 
 	@Override
 	public void processMouseEvent(MouseEvent evnt) {
+		if (this.mode == Mode.Select) {
+			if (evnt.getID() == MouseEvent.MOUSE_PRESSED) {
+				this.mousePressLocation = evnt.getPoint();
+				Point mouseLoc = evnt.getPoint();
+				GeometryDescriptor gd = pointGeometry(mouseLoc);
 
-		if (evnt.getID() == MouseEvent.MOUSE_PRESSED) {
-			this.mousePressLocation = evnt.getPoint();
-			Point mouseLoc = evnt.getPoint();
-			GeometryDescriptor gd = pointGeometry(mouseLoc);
-
-			System.out.println(gd.toString());
-			if (gd.node != null) {
-				this.textLocation = gd.textLocation;
-				this.index = gd.index;
-				this.selectedNode = gd.node;
-				this.selectedConnection = null;
-			} else if (gd.connection != null) {
-				this.index = gd.index;
-				this.selectedConnection = gd.connection;
-				this.selectedNode = null;
-			} else {
-				this.selectedConnection = null;
-				this.selectedNode = null;
+				System.out.println(gd.toString());
+				if (gd.node != null) {
+					this.textLocation = gd.textLocation;
+					this.index = gd.index;
+					this.selectedNode = gd.node;
+					this.selectedConnection = null;
+				} else if (gd.connection != null) {
+					this.index = gd.index;
+					this.selectedConnection = gd.connection;
+					this.selectedNode = null;
+				} else {
+					this.selectedConnection = null;
+					this.selectedNode = null;
+				}
+				this.repaint();
 			}
-			this.repaint();
-		}
-		
-		if (evnt.getID() == MouseEvent.MOUSE_RELEASED) {
-			this.offsetPoint = null;
+
+			if (evnt.getID() == MouseEvent.MOUSE_RELEASED) {
+				this.offsetPoint = null;
+			}
+		} else if (this.mode == Mode.AddNode) {
+			if (evnt.getID() == MouseEvent.MOUSE_PRESSED) {
+				Point mouseLoc = evnt.getPoint();
+				NetworkNode newNode = new NetworkNode("New Node", mouseLoc.x, mouseLoc.y);
+				newNode.setNetwork(this.network);
+				this.network.addNode(newNode);
+			}
+		} else if (this.mode == Mode.AddConnection) {
+			if (evnt.getID() == MouseEvent.MOUSE_PRESSED) {
+				this.mousePressLocation = evnt.getPoint();
+				Point mouseLoc = evnt.getPoint();
+				for (int i = this.network.nNodes() - 1; i >= 0; i--) {
+					NetworkNode node = this.network.getNode(i);
+					if (isCloseEnoughToNode(node, mouseLoc)) {
+						Side side = getConnectionSide(node, mouseLoc);
+						if (side != null) {
+							System.out.println("Setting New Connection First Node: " + node.getName() + " - " + side.name());
+							this.connectionFirstNode = node;
+							this.connectionFirstSide = side;
+							this.mousePressLocation = getNodeSidePoint(node, side);
+							return;
+						}
+					}
+				}
+				this.connectionFirstNode = null;
+				this.connectionFirstSide = null;
+				this.mousePressLocation = null;
+			} else if (evnt.getID() == MouseEvent.MOUSE_RELEASED) {
+				this.dragToLocation = null;
+				this.dragToSide = Side.Left;
+				if (this.mousePressLocation != null) {
+					System.out.println("Node: " + this.connectionFirstNode.getName() + " - " + this.connectionFirstSide.name());
+					Point mouseLoc = evnt.getPoint();
+					for (int i = this.network.nNodes() - 1; i >= 0; i--) {
+						NetworkNode node = this.network.getNode(i);
+						if (isCloseEnoughToNode(node, mouseLoc)) {
+							Side side = getConnectionSide(node, mouseLoc);
+							if (side != null) {
+								this.network.addConnection(new NetworkConnection(this.connectionFirstNode.getName(), this.connectionFirstSide, node.getName(), side));
+								return;
+							}
+						}
+					}
+				}
+				this.mousePressLocation = null;
+			}
 		}
 
+	}
+	/*
+	 * Returns a the side of the node that this mouse location is closest to if it is within 15 pixels of the center of the side
+	 * Returns null if the point is not near any of the four sides of this node.
+	 */
+
+	private Side getConnectionSide(NetworkNode n, Point mouseLoc) {
+
+		Point top = getNodeSidePoint(n, Side.Top);
+		if (mouseLoc.distance(top) < 15) {
+			return Side.Top;
+		}
+		Point left = getNodeSidePoint(n, Side.Left);
+		if (mouseLoc.distance(left) < 15) {
+			return Side.Left;
+		}
+		Point right = getNodeSidePoint(n, Side.Right);
+		if (mouseLoc.distance(right) < 15) {
+			return Side.Right;
+		}
+		Point bottom = getNodeSidePoint(n, Side.Bottom);
+		if (mouseLoc.distance(bottom) < 15) {
+			return Side.Bottom;
+		}
+		return null;
+	}
+
+	/*
+	 * Returns the point representing the center of the given side for a given node
+	 */
+	private Point getNodeSidePoint(NetworkNode n, Side side) {
+		System.out.println("getNodeSidePoint: " + n.getName() + " -- " + side.name());
+		Graphics g = this.graphics;
+		FontMetrics FM = g.getFontMetrics();
+		int width = FM.stringWidth(n.getName());
+		int textHeight = FM.getHeight();
+
+		int n1Left = (int) n.getX() - width / 2;
+		int n1Top = (int) n.getY() - FM.getHeight() / 2;
+
+		int margin = 10;
+
+		int n1borderLeft = n1Left - margin;
+		int n1borderWidth = width + margin * 2;
+		int n1borderTop = n1Top - margin / 2;
+		int n1borderHeight = textHeight + margin * 2;
+
+		int x1, y1;
+
+		if (side == Side.Top) {
+			x1 = n1borderLeft + n1borderWidth / 2;
+			y1 = n1borderTop;
+		} else if (side == Side.Left) {
+			x1 = n1borderLeft;
+			y1 = n1borderTop + n1borderHeight / 2;
+		} else if (side == Side.Right) {
+			x1 = n1borderLeft + n1borderWidth;
+			y1 = n1borderTop + n1borderHeight / 2;
+		} else {
+			x1 = n1borderLeft + n1borderWidth / 2;
+			y1 = n1borderTop + n1borderHeight;
+		}
+		return new Point(x1, y1);
+	}
+
+	private boolean isCloseEnoughToNode(NetworkNode n, Point mouseLoc) {
+		int xMax, xMin, yMax, yMin;
+
+		Graphics g = this.graphics;
+
+		FontMetrics FM = g.getFontMetrics();
+		int textWidth = FM.stringWidth(n.getName());
+		int textHeight = FM.getHeight();
+		int textLeft = (int) n.getX() - textWidth / 2;
+		int textTop = (int) n.getY() - FM.getHeight() / 2;
+
+		int margin = 10;
+
+		xMin = textLeft - margin - 15;
+		xMax = xMin + (textWidth + (margin * 2)) + 30;
+		yMin = textTop - margin / 2 - 15;
+		yMax = yMin + (textHeight + (margin * 2)) + 30;
+
+		//Check bounding box
+		if (mouseLoc.getX() < xMin || mouseLoc.getX() > xMax || mouseLoc.getY() < yMin || mouseLoc.getY() > yMax) {
+			return false;
+		}
+		return true;
 	}
 
 	@Override
@@ -206,6 +380,11 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 			} catch (Exception ex) {
 				Logger.getLogger(NetworkView.class.getName()).log(Level.SEVERE, null, ex);
 			}
+		}
+
+		if (this.dragToLocation != null && connectionFirstNode != null) {
+			System.out.println("Drawing new drag location");
+			paintNewConnection(g);
 		}
 
 	}
@@ -239,31 +418,56 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		return objectClicked;
 	}
 
+	private int min(int[] array) {
+		int min = array[0];
+		for (int i = 1; i < array.length; i++) {
+			if (array[i] < min) {
+				min = array[i];
+			}
+		}
+		return min;
+	}
+
+	private int max(int[] array) {
+		int max = array[0];
+		for (int i = 1; i < array.length; i++) {
+			if (array[i] > max) {
+				max = array[i];
+			}
+		}
+		return max;
+	}
+
 	private boolean containsPoint(NetworkConnection c, Point mouseLoc) {
 		int xMax, xMin, yMax, yMin;
 		Graphics g = this.graphics;
 		XYPoints p = getXYPointsFromConnection(g, c);
 
-		if (p.x1 > p.x2) {
-			xMax = p.x1;
-			xMin = p.x2;
-		} else {
-			xMin = p.x1;
-			xMax = p.x2;
-		}
-		if (p.y1 > p.y2) {
-			yMax = p.y1;
-			yMin = p.y2;
-		} else {
-			yMin = p.y1;
-			yMax = p.y2;
-		}
+		int c1x = getBezierX(p.x1, c.side1);
+		int c1y = getBezierY(p.y1, c.side1);
+		int c2x = getBezierX(p.x2, c.side2);
+		int c2y = getBezierY(p.y2, c.side2);
+
+		int[] xPoints = {p.x1, p.x2, c1x, c2x};
+		int[] yPoints = {p.y1, p.y2, c1y, c2y};
+
+		xMax = max(xPoints);
+		xMin = min(xPoints);
+
+		yMax = max(yPoints);
+		yMin = min(yPoints);
+
+//		System.out.println("X-min: " + xMin);
+//		System.out.println("X-max: " + xMax);
+//		System.out.println("Y-min: " + yMin);
+//		System.out.println("Y-max: " + yMax);
 
 		//Check bounding box
 		if (mouseLoc.getX() < xMin || mouseLoc.getX() > xMax || mouseLoc.getY() < yMin || mouseLoc.getY() > yMax) {
 			return false;
 		}
 
+		//TODO. Change this to be dist to Bezier curve
 		//second check closest point
 		if (distToSegment(mouseLoc, new Point(p.x1, p.y1), new Point(p.x2, p.y2)) > 5) {
 			return false;
@@ -306,7 +510,6 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 
 		FontMetrics FM = g.getFontMetrics();
 		int textWidth = FM.stringWidth(n.getName());
-		int textHeight = FM.getHeight();
 		int textLeft = (int) n.getX() - textWidth / 2;
 		int textRight = (int) n.getX() + textWidth / 2;
 
@@ -340,9 +543,6 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		int textWidth = FM.stringWidth(n.getName());
 		int textHeight = FM.getHeight();
 		int textLeft = (int) n.getX() - textWidth / 2;
-		int textRight = (int) n.getX() + textWidth / 2;
-
-		int textBase = (int) n.getY() + FM.getHeight() / 2;
 		int textTop = (int) n.getY() - FM.getHeight() / 2;
 
 		int margin = 10;
@@ -390,7 +590,6 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		int textWidth = FM.stringWidth(n.getName());
 		int textHeight = FM.getHeight();
 		int textLeft = (int) n.getX() - textWidth / 2;
-		int textRight = (int) n.getX() + textWidth / 2;
 
 		int textBase = (int) n.getY() + FM.getHeight() / 2;
 		int textTop = (int) n.getY() - FM.getHeight() / 2;
@@ -431,18 +630,76 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		g.setColor(Color.blue);
 	}
 
-	private void paintConnection(Graphics g, NetworkConnection c, boolean highlighted) {
+	private void paintNewConnection(Graphics g) {
+		Graphics2D g2d = (Graphics2D) g;
+		g.setColor(Color.blue);
 
+		int x1 = this.mousePressLocation.x;
+		int y1 = this.mousePressLocation.y;
+		int x2 = this.dragToLocation.x;
+		int y2 = this.dragToLocation.y;
+
+		int c1x = getBezierX(x1, this.connectionFirstSide);
+		int c1y = getBezierY(y1, this.connectionFirstSide);
+		int c2x = getBezierX(x2, this.dragToSide);
+		int c2y = getBezierY(y2, this.dragToSide);
+
+		Path2D path = new GeneralPath();
+		path.moveTo(x1, y1);
+		path.curveTo(c1x, c1y, c2x, c2y, x2, y2);
+
+		g2d.draw(path);
+	}
+
+	private void paintConnection(Graphics g, NetworkConnection c, boolean highlighted) {
+		Graphics2D g2d = (Graphics2D) g;
 		if (highlighted) {
 			g.setColor(Color.blue);
 		} else {
 			g.setColor(Color.black);
 		}
 
-
 		XYPoints p = getXYPointsFromConnection(g, c);
 
-		g.drawLine(p.x1, p.y1, p.x2, p.y2);
+		int c1x = getBezierX(p.x1, c.side1);
+		int c1y = getBezierY(p.y1, c.side1);
+		int c2x = getBezierX(p.x2, c.side2);
+		int c2y = getBezierY(p.y2, c.side2);
+
+		Path2D path = new GeneralPath();
+		path.moveTo(p.x1, p.y1);
+		path.curveTo(c1x, c1y, c2x, c2y, p.x2, p.y2);
+
+		g2d.draw(path);
+		//g.drawLine(p.x1, p.y1, p.x2, p.y2);
+	}
+
+	private int getBezierX(int x, Side side) {
+		switch (side) {
+			case Right:
+				x += 100;
+				break;
+			case Left:
+				x -= 100;
+				break;
+			default:
+				break;
+		}
+		return x;
+	}
+
+	private int getBezierY(int y, Side side) {
+		switch (side) {
+			case Top:
+				y -= 100;
+				break;
+			case Bottom:
+				y += 100;
+				break;
+			default:
+				break;
+		}
+		return y;
 	}
 
 	private XYPoints getXYPointsFromConnection(Graphics g, NetworkConnection c) {

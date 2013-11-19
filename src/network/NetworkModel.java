@@ -221,7 +221,7 @@ public class NetworkModel {
 			Logger.getLogger(NetworkModel.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
-	
+
 	public void saveToNewLocation(String absolutePath) {
 		try {
 			System.out.println("Writing to file: " + absolutePath);
@@ -257,6 +257,7 @@ public class NetworkModel {
 	public void addNode(NetworkNode newNode) {
 		this.changesSaved = false;
 		this.nodes.add(newNode);
+		this.update();
 	}
 
 	/**
@@ -271,9 +272,9 @@ public class NetworkModel {
 	 *
 	 * @param i index of the desired object. Must be less than nNodes()
 	 */
-	public NetworkNode getNode(int i) throws Exception {
+	public NetworkNode getNode(int i) { // throws Exception {
 		if (i >= this.nodes.size() || i < 0) {
-			throw new Exception();
+			//throw new Exception();
 		}
 		return this.nodes.get(i);
 	}
@@ -313,6 +314,7 @@ public class NetworkModel {
 	public void addConnection(NetworkConnection newConnection) {
 		this.changesSaved = false;
 		this.connections.add(newConnection);
+		this.update();
 	}
 
 	/**
