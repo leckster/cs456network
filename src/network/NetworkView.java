@@ -441,12 +441,16 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 	private boolean containsPoint(NetworkConnection c, Point mouseLoc) {
 		int xMax, xMin, yMax, yMin;
 		Graphics g = this.graphics;
+
 		XYPoints p = getXYPointsFromConnection(g, c);
 
 		int c1x = getBezierX(p.x1, c.side1);
 		int c1y = getBezierY(p.y1, c.side1);
 		int c2x = getBezierX(p.x2, c.side2);
 		int c2y = getBezierY(p.y2, c.side2);
+
+		Point c1 = new Point(c1x, c1y);
+		Point c2 = new Point(c2x, c2y);
 
 		int[] xPoints = {p.x1, p.x2, c1x, c2x};
 		int[] yPoints = {p.y1, p.y2, c1y, c2y};
@@ -469,11 +473,36 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 
 		//TODO. Change this to be dist to Bezier curve
 		//second check closest point
-		if (distToSegment(mouseLoc, new Point(p.x1, p.y1), new Point(p.x2, p.y2)) > 5) {
-			return false;
+		if (closeToCurve(p, c1, c2, mouseLoc)) {
+			return true;
 		}
+		return false;
 
-		return true;
+//		if (distToSegment(mouseLoc, new Point(p.x1, p.y1), new Point(p.x2, p.y2)) > 5) {
+//			return false;
+//		}
+//
+//		return true;
+	}
+
+	private boolean closeToCurve(XYPoints p, Point c1, Point c2, Point mouseLoc) {
+
+		Point anchor1 = new Point(p.x1, p.y1);
+		Point anchor2 = new Point(p.x2, p.y2);
+		for (float u = 0; u < 1; u += .01) {
+			double posx = Math.pow(u, 3) * (anchor2.x + 3 * (c1.x - c2.x) - anchor1.x)
+					+ 3 * Math.pow(u, 2) * (anchor1.x - 2 * c1.x + c2.x)
+					+ 3 * u * (c1.x - anchor1.x) + anchor1.x;
+
+			double posy = Math.pow(u, 3) * (anchor2.y + 3 * (c1.y - c2.y) - anchor1.y)
+					+ 3 * Math.pow(u, 2) * (anchor1.y - 2 * c1.y + c2.y)
+					+ 3 * u * (c1.y - anchor1.y) + anchor1.y;
+
+			if (mouseLoc.distance(posx, posy) < 3) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private float sqr(float x) {
