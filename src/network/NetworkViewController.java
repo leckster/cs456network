@@ -19,6 +19,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import network.NetworkView.Mode;
 
 /**
@@ -37,6 +38,8 @@ public class NetworkViewController extends JPanel implements ActionListener {
 	}
 
 	public NetworkViewController(String fName) {
+		FileNameExtensionFilter filter = new FileNameExtensionFilter("TEXT FILES", "txt", "text");
+		fc.setFileFilter(filter);
 		File file = new File(fName);
 		this.fileName = file.getAbsolutePath();
 		F = new JFrame("Showing Network from file:" + fileName);

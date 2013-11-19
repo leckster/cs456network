@@ -498,7 +498,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 					+ 3 * Math.pow(u, 2) * (anchor1.y - 2 * c1.y + c2.y)
 					+ 3 * u * (c1.y - anchor1.y) + anchor1.y;
 
-			if (mouseLoc.distance(posx, posy) < 3) {
+			if (mouseLoc.distance(posx, posy) <= 3) {
 				return true;
 			}
 		}

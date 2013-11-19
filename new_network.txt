@@ -1,5 +1,11 @@
-N 113.0 40.0 "Central" 
-N 117.0 185.0 "Authentication server" 
-N 296.0 111.0 "Choo Choo Choo" 
-C "Central" R "Authentication server" T
-C "Choo Choo Choo" L "Central" B
+N 60.0 88.0 "Central" 
+N 227.0 131.0 "Authentication Server" 
+N 169.0 294.0 "Choo Choo" 
+N 294.0 203.0 "New Node HI sa" 
+C "Central" R "Authentication Server" T
+C "Choo Choo" L "Central" B
+C "Central" T "Authentication Server" T
+C "Central" T "Authentication Server" R
+C "Central" B "Choo Choo" T
+C "New Node HI sa" T "Choo Choo" T
+C "New Node HI sa" T "New Node HI sa" R
