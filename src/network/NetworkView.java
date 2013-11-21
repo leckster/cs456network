@@ -24,7 +24,8 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 
 		Select,
 		AddNode,
-		AddConnection
+		AddConnection,
+		Rotate
 	}
 	private NetworkModel network;
 	private NetworkNode selectedNode;
@@ -202,10 +203,12 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 					this.selectedNode = gd.node;
 					this.selectedConnection = null;
 				} else if (gd.connection != null) {
+					this.textLocation = -1;
 					this.index = gd.index;
 					this.selectedConnection = gd.connection;
 					this.selectedNode = null;
 				} else {
+					this.textLocation = -1;
 					this.selectedConnection = null;
 					this.selectedNode = null;
 				}

@@ -72,10 +72,14 @@ public class NetworkViewController extends JPanel implements ActionListener {
 		JButton drawConnectionMode = makeNavigationButton("curve", "drawConnectionMode",
 				"Draw a new Connection",
 				"New Connection");
+		JButton rotateMode = makeNavigationButton("rotate", "rotateMode",
+				"Enter Rotate and Scale Mode",
+				"Rotate");
 
 		buttonPanel.add(selectMode);
 		buttonPanel.add(drawNodeMode);
 		buttonPanel.add(drawConnectionMode);
+		buttonPanel.add(rotateMode);
 
 		F.add(buttonPanel, BorderLayout.WEST);
 
@@ -214,6 +218,9 @@ public class NetworkViewController extends JPanel implements ActionListener {
 				break;
 			case "drawConnectionMode":
 				this.changeMode(Mode.AddConnection);
+				break;
+			case "rotateMode":
+				this.changeMode(Mode.Rotate);
 				break;
 			default:
 
