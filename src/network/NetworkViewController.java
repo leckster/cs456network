@@ -152,6 +152,7 @@ public class NetworkViewController extends JPanel implements ActionListener {
 			}
 		});
 		F.setVisible(true);
+		view.setSize();
 		F.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 
 	}

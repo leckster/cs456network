@@ -30,16 +30,27 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 	private NetworkModel network;
 	private NetworkNode selectedNode;
 	private NetworkConnection selectedConnection;
+	
 	private int index;
 	private int textLocation;
+	
 	private Point mousePressLocation;
 	private Point offsetPoint;
+	private int xOffset;
+	private int yOffset;
+	
 	private NetworkNode connectionFirstNode;
 	private Side connectionFirstSide;
 	private Point dragToLocation;
 	private Side dragToSide = Side.Left;
-	private int xOffset;
-	private int yOffset;
+	
+	private Point firstClick;
+	private Point rotationCenter;
+	private double theta;
+	private double tempTheta;
+	private double scale;
+	private double tempScale;
+	
 	private Graphics graphics;
 	private Mode mode;
 
@@ -51,6 +62,9 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		this.index = 0;
 		this.textLocation = -1;
 		this.graphics = null;
+		this.theta = 0;
+		this.scale = 1;
+		this.tempScale = -1;
 
 		this.network.addNetworkViewListener(this);
 
@@ -58,6 +72,15 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		enableEvents(AWTEvent.MOUSE_EVENT_MASK);
 		enableEvents(AWTEvent.MOUSE_MOTION_EVENT_MASK);
 		enableEvents(AWTEvent.KEY_EVENT_MASK);
+	}
+
+	/*
+	 * Funciton to be called after the view has been rendered.
+	 * This will set the center of the current panel as the default center of rotaiton.
+	 */
+	public void setSize() {
+		this.rotationCenter = new Point(this.getWidth() / 2, this.getHeight() / 2);
+		System.out.println(this.rotationCenter);
 	}
 
 	public void changeNetwork(NetworkModel network) {
@@ -184,6 +207,12 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 				}
 				this.repaint();
 				//TODO. add logic for when dragging while adding a connection
+			} else if (this.mode == Mode.Rotate) {
+				Point mouseLoc = evnt.getPoint();
+				if(this.mousePressLocation.distance(evnt.getPoint()) > 3) {
+					this.tempScale = this.scale * this.rotationCenter.distance(mouseLoc) / this.rotationCenter.distance(this.mousePressLocation);
+					this.repaint();
+				}
 			}
 		}
 	}
@@ -234,7 +263,6 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 					if (isCloseEnoughToNode(node, mouseLoc)) {
 						Side side = getConnectionSide(node, mouseLoc);
 						if (side != null) {
-							System.out.println("Setting New Connection First Node: " + node.getName() + " - " + side.name());
 							this.connectionFirstNode = node;
 							this.connectionFirstSide = side;
 							this.mousePressLocation = getNodeSidePoint(node, side);
@@ -264,13 +292,47 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 				}
 				this.mousePressLocation = null;
 			}
+		} else if (this.mode == Mode.Rotate) {
+			if (evnt.getID() == MouseEvent.MOUSE_CLICKED) {
+				Point mouseLoc = evnt.getPoint();
+				this.rotationCenter = mouseLoc;
+				System.out.println("Center Set");
+				if (this.firstClick != null) {
+					if (mouseLoc.distance(this.firstClick) <= 3) {
+						//Double Click
+						//Reset Transformations
+						System.out.println("Transformations Reset");
+						this.resetTransformations();
+					}
+					this.firstClick = null;
+				} else {
+					this.firstClick = evnt.getPoint();
+				}
+				this.repaint();
+			}
+			if (evnt.getID() == MouseEvent.MOUSE_PRESSED) {
+				this.mousePressLocation = evnt.getPoint();
+			}
+			if (evnt.getID() == MouseEvent.MOUSE_RELEASED) {
+				this.mousePressLocation = null;
+				if(this.tempScale != -1) {
+					this.scale = this.tempScale;
+				}
+				this.tempScale = -1;
+			}
 		}
-
 	}
 	/*
 	 * Returns a the side of the node that this mouse location is closest to if it is within 15 pixels of the center of the side
 	 * Returns null if the point is not near any of the four sides of this node.
 	 */
+
+	private void resetTransformations() {
+		this.setSize();
+		this.theta = 0;
+		this.scale = 1;
+		//clear the stack of transformations.
+	}
 
 	private Side getConnectionSide(NetworkNode n, Point mouseLoc) {
 
@@ -361,13 +423,24 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		super.paint(g);
 
 		this.graphics = g;
-
+		Graphics2D g2d = (Graphics2D) g;
+		
+		g2d.rotate(this.theta, this.rotationCenter.x, this.rotationCenter.y);
+		Double scaleFactor = this.scale;
+		if(this.tempScale != -1) {
+			scaleFactor = this.tempScale;
+		} 
+		
+		g2d.translate(this.rotationCenter.x, this.rotationCenter.y);
+		g2d.scale(scaleFactor, scaleFactor);
+		g2d.translate(-this.rotationCenter.x, -this.rotationCenter.y);
+		
 		for (int i = 0; i < this.network.nNodes(); i++) {
 			try {
 				if (this.selectedNode != null && this.index == i) {
-					paintNode(g, this.network.getNode(i), true, this.textLocation);
+					paintNode(g2d, this.network.getNode(i), true, this.textLocation);
 				} else {
-					paintNode(g, this.network.getNode(i), false, -1);
+					paintNode(g2d, this.network.getNode(i), false, -1);
 				}
 			} catch (Exception ex) {
 				Logger.getLogger(NetworkView.class.getName()).log(Level.SEVERE, null, ex);
@@ -376,13 +449,18 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		for (int i = 0; i < this.network.nConnections(); i++) {
 			try {
 				if (this.selectedConnection != null && this.index == i) {
-					paintConnection(g, this.network.getConnection(i), true);
+					paintConnection(g2d, this.network.getConnection(i), true);
 				} else {
-					paintConnection(g, this.network.getConnection(i), false);
+					paintConnection(g2d, this.network.getConnection(i), false);
 				}
 			} catch (Exception ex) {
 				Logger.getLogger(NetworkView.class.getName()).log(Level.SEVERE, null, ex);
 			}
+		}
+
+		if (this.mode == Mode.Rotate) {
+			g2d.setColor(Color.ORANGE);
+			g2d.drawRect(this.rotationCenter.x, this.rotationCenter.y, 3, 3);
 		}
 
 		if (this.dragToLocation != null && connectionFirstNode != null) {
