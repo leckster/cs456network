@@ -65,6 +65,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		this.theta = 0;
 		this.scale = 1;
 		this.tempScale = -1;
+		this.tempTheta = -100;
 
 		this.network.addNetworkViewListener(this);
 
@@ -211,6 +212,10 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 				Point mouseLoc = evnt.getPoint();
 				if(this.mousePressLocation.distance(evnt.getPoint()) > 3) {
 					this.tempScale = this.scale * this.rotationCenter.distance(mouseLoc) / this.rotationCenter.distance(this.mousePressLocation);
+					Double normalizeTheta = Math.atan2(this.mousePressLocation.x - this.rotationCenter.x, this.mousePressLocation.y - this.rotationCenter.y);
+					Double diffTheta = Math.atan2(mouseLoc.x - this.rotationCenter.x, mouseLoc.y - this.rotationCenter.y);
+					this.tempTheta = this.theta + diffTheta - normalizeTheta;
+					System.out.println("Temp theta: " + this.tempTheta);
 					this.repaint();
 				}
 			}
@@ -312,13 +317,20 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 			}
 			if (evnt.getID() == MouseEvent.MOUSE_PRESSED) {
 				this.mousePressLocation = evnt.getPoint();
+				if(this.mousePressLocation.x == this.rotationCenter.x && this.mousePressLocation.y == this.rotationCenter.y) {
+					this.mousePressLocation = new Point(this.mousePressLocation.x + 1, this.mousePressLocation.y + 1);
+				}
 			}
 			if (evnt.getID() == MouseEvent.MOUSE_RELEASED) {
 				this.mousePressLocation = null;
 				if(this.tempScale != -1) {
 					this.scale = this.tempScale;
 				}
+				if(this.tempTheta != -100) {
+					this.theta = this.tempTheta;
+				}
 				this.tempScale = -1;
+				this.tempTheta = -100;
 			}
 		}
 	}
@@ -425,12 +437,16 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		this.graphics = g;
 		Graphics2D g2d = (Graphics2D) g;
 		
-		g2d.rotate(this.theta, this.rotationCenter.x, this.rotationCenter.y);
+		Double theta = this.theta;
+		if(this.tempTheta != -100) {
+			theta = this.tempTheta;
+		}
+		g2d.rotate(-theta, this.rotationCenter.x, this.rotationCenter.y);
+		
 		Double scaleFactor = this.scale;
 		if(this.tempScale != -1) {
 			scaleFactor = this.tempScale;
-		} 
-		
+		}
 		g2d.translate(this.rotationCenter.x, this.rotationCenter.y);
 		g2d.scale(scaleFactor, scaleFactor);
 		g2d.translate(-this.rotationCenter.x, -this.rotationCenter.y);
