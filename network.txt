@@ -1,10 +1,10 @@
 N 34.0 113.0 "Central" 
 N 243.0 89.0 "Authentication Server" 
 N 128.0 286.0 "Train Goes Choo Choo" 
-N 303.0 274.0 "HFAC" 
+N 254.0 280.0 "HFAC" 
 N 119.0 148.0 "New Nasdfode" 
-N 280.0 164.0 "Neasdfw Node" 
-N 394.0 37.0 "New Node" 
+N 236.0 167.0 "Neasdfw Node" 
+N 315.0 133.0 "New Node" 
 C "Central" R "Authentication Server" T
 C "Train Goes Choo Choo" L "Central" B
 C "Central" T "Authentication Server" T

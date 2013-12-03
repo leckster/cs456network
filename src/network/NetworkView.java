@@ -10,6 +10,7 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.GeneralPath;
 import java.awt.geom.Path2D;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -30,24 +31,26 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		Rotate
 	}
 	private NetworkModel network;
+	/*---- SELECT MODE VARIABLES ----*/
 	private NetworkNode selectedNode;
 	private NetworkConnection selectedConnection;
 	private int index;
 	private int textLocation;
-	private Point mousePressLocation;
-	private Point offsetPoint;
+	private Point2D mousePressLocation;
+	private Point2D offsetPoint;
 	private int xOffset;
 	private int yOffset;
+	/*---- ADD CONNECT MODE VARIABLES ----*/
 	private NetworkNode connectionFirstNode;
 	private Side connectionFirstSide;
-	private Point dragToLocation;
+	private Point2D dragToLocation;
 	private Side dragToSide = Side.Left;
-	private Point firstClick;
-	private Point rotationCenter;
-	private double theta;
-	private double tempTheta;
-	private double scale;
-	private double tempScale;
+	/*---- ROTATE MODE VARIABLES ----*/
+	private Point2D firstClick;
+	private Point2D rotationCenter;
+	private AffineTransform transform;
+	private AffineTransform tempTransform;
+	/*---- GLOBAL VARIABLES ----*/
 	private Graphics graphics;
 	private Mode mode;
 
@@ -59,10 +62,9 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		this.index = 0;
 		this.textLocation = -1;
 		this.graphics = null;
-		this.theta = 0;
-		this.scale = 1;
-		this.tempScale = -1;
-		this.tempTheta = -100;
+		
+		transform = new AffineTransform();
+		tempTransform = null;
 
 		this.network.addNetworkViewListener(this);
 
@@ -174,18 +176,18 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 	@Override
 	public void processMouseMotionEvent(MouseEvent evnt) {
 		if (evnt.getID() == MouseEvent.MOUSE_DRAGGED) {
-			Point mouseLoc = transform(evnt.getPoint());
+			Point2D mouseLoc = transform(evnt.getPoint());
 			if (this.mode == Mode.Select) {
 				//if there is a selected node. Update location to new loc
 				if (this.selectedNode != null) {
 					if (this.mousePressLocation.distance(mouseLoc) > 3) {
 						if (this.offsetPoint == null) {
 							this.offsetPoint = mouseLoc;
-							this.xOffset = (int) this.selectedNode.getX() - this.offsetPoint.x;
-							this.yOffset = (int) this.selectedNode.getY() - this.offsetPoint.y;
+							this.xOffset = (int) ((int) this.selectedNode.getX() - this.offsetPoint.getX());
+							this.yOffset = (int) ((int) this.selectedNode.getY() - this.offsetPoint.getY());
 
 						}
-						this.network.setNewNodeLocation(this.index, mouseLoc.x + xOffset, mouseLoc.y + yOffset);
+						this.network.setNewNodeLocation(this.index, (int)mouseLoc.getX() + xOffset, (int)mouseLoc.getY() + yOffset);
 					}
 				}
 			} else if (this.mode == Mode.AddConnection) {
@@ -201,13 +203,20 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 					}
 				}
 				this.repaint();
-				//TODO. add logic for when dragging while adding a connection
 			} else if (this.mode == Mode.Rotate) {
 				if (this.mousePressLocation.distance(mouseLoc) > 3) {
-					this.tempScale = this.scale * this.rotationCenter.distance(mouseLoc) / this.rotationCenter.distance(this.mousePressLocation);
-					Double normalizeTheta = Math.atan2(this.mousePressLocation.x - this.rotationCenter.x, this.mousePressLocation.y - this.rotationCenter.y);
-					Double diffTheta = Math.atan2(mouseLoc.x - this.rotationCenter.x, mouseLoc.y - this.rotationCenter.y);
-					this.tempTheta = this.theta + diffTheta - normalizeTheta;
+					double tempScale = this.rotationCenter.distance(mouseLoc) / this.rotationCenter.distance(this.mousePressLocation);
+					Double normalizeTheta = Math.atan2(this.mousePressLocation.getX() - this.rotationCenter.getX(), this.mousePressLocation.getY() - this.rotationCenter.getY());
+					Double diffTheta = Math.atan2(mouseLoc.getX() - this.rotationCenter.getX(), mouseLoc.getY() - this.rotationCenter.getY());
+					double tempTheta = diffTheta - normalizeTheta;
+					AffineTransform at = new AffineTransform();
+					at.translate(this.rotationCenter.getX(), this.rotationCenter.getY());
+					at.rotate(-tempTheta);
+					at.translate(-this.rotationCenter.getX(), -this.rotationCenter.getY());
+					at.translate(this.rotationCenter.getX(), this.rotationCenter.getY());
+					at.scale(tempScale, tempScale);
+					at.translate(-this.rotationCenter.getX(), -this.rotationCenter.getY());
+					this.tempTransform = at;
 					this.repaint();
 				}
 			}
@@ -216,7 +225,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 
 	@Override
 	public void processMouseEvent(MouseEvent evnt) {
-		Point mouseLoc = transform(evnt.getPoint());
+		Point2D mouseLoc = transform(evnt.getPoint());
 		if (this.mode == Mode.Select) {
 			if (evnt.getID() == MouseEvent.MOUSE_PRESSED) {
 				this.mousePressLocation = mouseLoc;
@@ -246,7 +255,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 			}
 		} else if (this.mode == Mode.AddNode) {
 			if (evnt.getID() == MouseEvent.MOUSE_PRESSED) {
-				NetworkNode newNode = new NetworkNode("New Node", mouseLoc.x, mouseLoc.y);
+				NetworkNode newNode = new NetworkNode("New Node", mouseLoc.getX(), mouseLoc.getY());
 				newNode.setNetwork(this.network);
 				this.network.addNode(newNode);
 			}
@@ -287,7 +296,8 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 			}
 		} else if (this.mode == Mode.Rotate) {
 			if (evnt.getID() == MouseEvent.MOUSE_CLICKED) {
-				this.rotationCenter = evnt.getPoint();
+				//this.rotationCenter = evnt.getPoint();
+				this.rotationCenter = mouseLoc;
 				if (this.firstClick != null) {
 					if (mouseLoc.distance(this.firstClick) <= 3) {
 						//Double Click
@@ -303,37 +313,34 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 			}
 			if (evnt.getID() == MouseEvent.MOUSE_PRESSED) {
 				this.mousePressLocation = mouseLoc;
-				if (this.mousePressLocation.x == this.rotationCenter.x && this.mousePressLocation.y == this.rotationCenter.y) {
-					this.mousePressLocation = new Point(this.mousePressLocation.x + 1, this.mousePressLocation.y + 1);
+				if (this.mousePressLocation.getX() == this.rotationCenter.getX() && this.mousePressLocation.getY() == this.rotationCenter.getY()) {
+					this.mousePressLocation = new Point((int)this.mousePressLocation.getX() + 1, (int)this.mousePressLocation.getY() + 1);
 				}
 			}
 			if (evnt.getID() == MouseEvent.MOUSE_RELEASED) {
 				this.mousePressLocation = null;
-				if (this.tempScale != -1) {
-					this.scale = this.tempScale;
+				if (this.tempTransform != null) {
+					this.transform.concatenate(this.tempTransform);
+					this.tempTransform = null;
 				}
-				if (this.tempTheta != -100) {
-					this.theta = this.tempTheta;
-				}
-				this.tempScale = -1;
-				this.tempTheta = -100;
 			}
 		}
 	}
 
-	private Point transform(Point mouseLoc) {
+	private Point2D transform(Point mouseLoc) {
 
-		double dX = (mouseLoc.getX() - this.rotationCenter.x) / this.scale;
-		double dY = (mouseLoc.getY() - this.rotationCenter.y) / this.scale;
-		double newX = this.rotationCenter.x + (Math.cos(this.theta) * dX - Math.sin(this.theta) * dY);
-		double newY = this.rotationCenter.y + (Math.sin(this.theta) * dX + Math.cos(this.theta) * dY);
-		return new Point((int) newX, (int) newY);
+		Point2D tempPoint = mouseLoc;
+		try {
+			tempPoint = this.transform.inverseTransform(mouseLoc, null);
+		} catch (NoninvertibleTransformException ex) {
+			Logger.getLogger(NetworkView.class.getName()).log(Level.SEVERE, null, ex);
+		}
+		return tempPoint;
 	}
 
 	private void resetTransformations() {
 		this.setSize();
-		this.theta = 0;
-		this.scale = 1;
+		this.transform = new AffineTransform();
 		//clear the stack of transformations.
 	}
 
@@ -341,7 +348,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 	 * Returns a the side of the node that this mouse location is closest to if it is within 15 pixels of the center of the side
 	 * Returns null if the point is not near any of the four sides of this node.
 	 */
-	private Side getConnectionSide(NetworkNode n, Point mouseLoc) {
+	private Side getConnectionSide(NetworkNode n, Point2D mouseLoc) {
 
 		Point top = getNodeSidePoint(n, Side.Top);
 		if (mouseLoc.distance(top) < 15) {
@@ -399,7 +406,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		return new Point(x1, y1);
 	}
 
-	private boolean isCloseEnoughToNode(NetworkNode n, Point mouseLoc) {
+	private boolean isCloseEnoughToNode(NetworkNode n, Point2D mouseLoc) {
 		int xMax, xMin, yMax, yMin;
 
 		Graphics g = this.graphics;
@@ -430,21 +437,11 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 
 		this.graphics = g;
 		Graphics2D g2d = (Graphics2D) g;
-
-		Double theta = this.theta;
-		if (this.tempTheta != -100) {
-			theta = this.tempTheta;
+		AffineTransform t = new AffineTransform(this.transform);
+		if(this.tempTransform != null) {
+			t.concatenate(tempTransform);
 		}
-		g2d.rotate(-theta, this.rotationCenter.x, this.rotationCenter.y);
-
-		Double scaleFactor = this.scale;
-		if (this.tempScale != -1) {
-			scaleFactor = this.tempScale;
-		}
-		g2d.translate(this.rotationCenter.x, this.rotationCenter.y);
-		g2d.scale(scaleFactor, scaleFactor);
-		g2d.translate(-this.rotationCenter.x, -this.rotationCenter.y);
-
+		g2d.transform(t);
 		for (int i = 0; i < this.network.nNodes(); i++) {
 			try {
 				if (this.selectedNode != null && this.index == i) {
@@ -470,7 +467,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 
 		if (this.mode == Mode.Rotate) {
 			g2d.setColor(Color.ORANGE);
-			g2d.drawRect(this.rotationCenter.x, this.rotationCenter.y, 3, 3);
+			g2d.drawRect((int)this.rotationCenter.getX(), (int)this.rotationCenter.getY(), 3, 3);
 		}
 
 		if (this.dragToLocation != null && connectionFirstNode != null) {
@@ -479,7 +476,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 
 	}
 
-	public GeometryDescriptor pointGeometry(Point mouseLoc) {
+	public GeometryDescriptor pointGeometry(Point2D mouseLoc) {
 		GeometryDescriptor objectClicked = new GeometryDescriptor();
 
 		for (int i = this.network.nConnections() - 1; i >= 0; i--) {
@@ -528,7 +525,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		return max;
 	}
 
-	private boolean containsPoint(NetworkConnection c, Point mouseLoc) {
+	private boolean containsPoint(NetworkConnection c, Point2D mouseLoc) {
 		int xMax, xMin, yMax, yMin;
 		Graphics g = this.graphics;
 
@@ -569,7 +566,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 //		return true;
 	}
 
-	private boolean closeToCurve(XYPoints p, Point c1, Point c2, Point mouseLoc) {
+	private boolean closeToCurve(XYPoints p, Point c1, Point c2, Point2D mouseLoc) {
 
 		Point anchor1 = new Point(p.x1, p.y1);
 		Point anchor2 = new Point(p.x2, p.y2);
@@ -617,7 +614,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		return (int) Math.sqrt(distToSegmentSquared(p, v, w));
 	}
 
-	private int getTextLocation(NetworkNode n, Point mouseLoc) {
+	private int getTextLocation(NetworkNode n, Point2D mouseLoc) {
 
 		Graphics g = this.graphics;
 
@@ -647,7 +644,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		return -1;
 	}
 
-	private boolean containsPoint(NetworkNode n, Point mouseLoc) {
+	private boolean containsPoint(NetworkNode n, Point2D mouseLoc) {
 		int xMax, xMin, yMax, yMin;
 
 		Graphics g = this.graphics;
@@ -747,10 +744,10 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		Graphics2D g2d = (Graphics2D) g;
 		g.setColor(Color.blue);
 
-		int x1 = this.mousePressLocation.x;
-		int y1 = this.mousePressLocation.y;
-		int x2 = this.dragToLocation.x;
-		int y2 = this.dragToLocation.y;
+		int x1 = (int) this.mousePressLocation.getX();
+		int y1 = (int) this.mousePressLocation.getY();
+		int x2 = (int) this.dragToLocation.getX();
+		int y2 = (int) this.dragToLocation.getY();
 
 		int c1x = getBezierX(x1, this.connectionFirstSide);
 		int c1y = getBezierY(y1, this.connectionFirstSide);
