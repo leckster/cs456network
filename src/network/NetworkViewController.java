@@ -33,6 +33,9 @@ public class NetworkViewController extends JPanel implements ActionListener {
 	private NetworkView view = null;
 	private String fileName = null;
 	final JFileChooser fc = new JFileChooser();
+	
+	private JMenuItem undo;
+	private JMenuItem redo;
 
 	public NetworkViewController() {
 	}
@@ -45,7 +48,7 @@ public class NetworkViewController extends JPanel implements ActionListener {
 		F = new JFrame("Showing Network from file:" + fileName);
 
 		JMenuBar menuBar = new JMenuBar();
-		JMenu menu = new JMenu("File");
+		JMenu fileMenu = new JMenu("File");
 		JMenuItem open = new JMenuItem("Open", KeyEvent.VK_O);
 		JMenuItem save = new JMenuItem("Save", KeyEvent.VK_S);
 		JMenuItem saveAs = new JMenuItem("Save As", KeyEvent.VK_A);
@@ -54,10 +57,25 @@ public class NetworkViewController extends JPanel implements ActionListener {
 		save.addActionListener(this);
 		saveAs.addActionListener(this);
 
-		menu.add(open);
-		menu.add(save);
-		menu.add(saveAs);
-		menuBar.add(menu);
+		fileMenu.add(open);
+		fileMenu.add(save);
+		fileMenu.add(saveAs);
+		
+		JMenu editMenu = new JMenu("Edit");
+		undo = new JMenuItem("Undo", KeyEvent.VK_U);
+		redo = new JMenuItem("Redo", KeyEvent.VK_R);
+		
+		undo.setEnabled(false);
+		redo.setEnabled(false);
+		
+		undo.addActionListener(this);
+		redo.addActionListener(this);
+		
+		editMenu.add(undo);
+		editMenu.add(redo);
+		
+		menuBar.add(fileMenu);
+		menuBar.add(editMenu);
 		F.setJMenuBar(menuBar);
 
 
@@ -97,7 +115,7 @@ public class NetworkViewController extends JPanel implements ActionListener {
 				return;
 			}
 		}
-
+		network.addControllerListener(this);
 		view = new NetworkView(network);
 
 		F.add(view);
@@ -196,6 +214,19 @@ public class NetworkViewController extends JPanel implements ActionListener {
 
 		return button;
 	}
+	
+	public void updateEditMenuButtons() {
+		if(network.canUndo()) {
+			undo.setEnabled(true);
+		} else {
+			undo.setEnabled(false);
+		}
+		if(network.canRedo()) {
+			redo.setEnabled(true);
+		} else {
+			redo.setEnabled(false);
+		}
+	}
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
@@ -210,6 +241,12 @@ public class NetworkViewController extends JPanel implements ActionListener {
 				break;
 			case "Save As":
 				this.saveAsFile();
+				break;
+			case "Undo":
+				this.undo();
+				break;
+			case "Redo":
+				this.redo();
 				break;
 			case "selectMode":
 				this.changeMode(Mode.Select);
@@ -260,6 +297,14 @@ public class NetworkViewController extends JPanel implements ActionListener {
 		} else {
 			System.out.println("Save command cancelled by user.");
 		}
+	}
+	
+	private void undo(){
+		this.network.undo();
+	}
+	
+	private void redo() {
+		this.network.redo();
 	}
 
 	private void makeNewNetwork(String absolutePath) {

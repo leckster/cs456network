@@ -4,6 +4,7 @@
  */
 package network;
 
+import java.awt.Point;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -14,6 +15,7 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.Stack;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import network.NetworkConnection.Side;
@@ -27,8 +29,12 @@ public class NetworkModel {
 	ArrayList<NetworkNode> nodes;
 	ArrayList<NetworkConnection> connections;
 	ArrayList<NetworkViewInterface> networkListeners;
+	ArrayList<NetworkViewController> controllerListeners;
+	Stack<CommandObj> done_actions;
+	Stack<CommandObj> undone_actions;
 	String filename;
 	boolean changesSaved;
+	boolean construction_mode = false;
 
 	/**
 	 * Creates an empty network model that has a unique default file name and no
@@ -39,6 +45,9 @@ public class NetworkModel {
 		this.nodes = new ArrayList<>();
 		this.connections = new ArrayList<>();
 		this.networkListeners = new ArrayList<>();
+		this.controllerListeners = new ArrayList<>();
+		this.done_actions = new Stack();
+		this.undone_actions = new Stack();
 		this.changesSaved = true;
 	}
 
@@ -52,11 +61,52 @@ public class NetworkModel {
 		for (int i = 0; i < networkListeners.size(); i++) {
 			networkListeners.get(i).updateView();
 		}
+		for (int i = 0; i < controllerListeners.size(); i++) {
+			controllerListeners.get(i).updateEditMenuButtons();
+		}
 	}
 
 	public void setNewNodeLocation(int index, int x, int y) {
 		this.changesSaved = false;
 		this.nodes.get(index).setLocation(x, y);
+	}
+
+	public void changeNodeLocation(int index, int newX, int newY, int oldX, int oldY) {
+		CommandObj command = new MoveNodeCommand(this, index, new Point(newX, newY), new Point(oldX, oldY));
+		command._do();
+		this.done_actions.push(command);
+		this.undone_actions.clear();
+		this.update();
+	}
+
+	public boolean canUndo() {
+		return !this.done_actions.empty();
+	}
+
+	public boolean canRedo() {
+		return !this.undone_actions.empty();
+	}
+
+	public void undo() {
+		if (!this.canUndo()) {
+			return;
+		}
+		CommandObj command = this.done_actions.pop();
+		command._undo();
+		this.undone_actions.push(command);
+		this.changesSaved = false;
+		this.update();
+	}
+
+	public void redo() {
+		if (!this.canRedo()) {
+			return;
+		}
+		CommandObj command = this.undone_actions.pop();
+		command._do();
+		this.done_actions.push(command);
+		this.changesSaved = false;
+		this.update();
 	}
 
 	/**
@@ -66,6 +116,14 @@ public class NetworkModel {
 	 */
 	public void addNetworkViewListener(NetworkViewInterface newView) {
 		this.networkListeners.add(newView);
+	}
+
+	public void addControllerListener(NetworkViewController controller) {
+		this.controllerListeners.add(controller);
+	}
+
+	public void removeControllerListener(NetworkViewController controller) {
+		this.controllerListeners.remove(controller);
 	}
 
 	/**
@@ -114,7 +172,12 @@ public class NetworkModel {
 		this.nodes = new ArrayList<>();
 		this.connections = new ArrayList<>();
 		this.networkListeners = new ArrayList<>();
+		this.controllerListeners = new ArrayList<>();
+		this.done_actions = new Stack();
+		this.undone_actions = new Stack();
+		this.construction_mode = true;
 		this.filename = fileName;
+
 
 		File file = new File(this.filename);
 		if (!file.exists()) {
@@ -127,7 +190,7 @@ public class NetworkModel {
 		while ((line = reader.readLine()) != null) {
 			processLine(line);
 		}
-
+		this.construction_mode = false;
 	}
 
 	private void processLine(String line) {
@@ -255,8 +318,15 @@ public class NetworkModel {
 	 * @param newNode
 	 */
 	public void addNode(NetworkNode newNode) {
+		if (construction_mode) {
+			this.nodes.add(newNode);
+		} else {
+			CommandObj command = new NewNodeCommand(newNode, this);
+			command._do();
+			this.done_actions.push(command);
+			this.undone_actions.clear();
+		}
 		this.changesSaved = false;
-		this.nodes.add(newNode);
 		this.update();
 	}
 

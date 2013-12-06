@@ -36,6 +36,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 	private NetworkConnection selectedConnection;
 	private int index;
 	private int textLocation;
+	private boolean nodeWasDragged;
 	private Point2D mousePressLocation;
 	private Point2D offsetPoint;
 	private int xOffset;
@@ -62,7 +63,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		this.index = 0;
 		this.textLocation = -1;
 		this.graphics = null;
-		
+
 		transform = new AffineTransform();
 		tempTransform = null;
 
@@ -181,13 +182,14 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 				//if there is a selected node. Update location to new loc
 				if (this.selectedNode != null) {
 					if (this.mousePressLocation.distance(mouseLoc) > 3) {
+						this.nodeWasDragged = true;
 						if (this.offsetPoint == null) {
 							this.offsetPoint = mouseLoc;
 							this.xOffset = (int) ((int) this.selectedNode.getX() - this.offsetPoint.getX());
 							this.yOffset = (int) ((int) this.selectedNode.getY() - this.offsetPoint.getY());
 
 						}
-						this.network.setNewNodeLocation(this.index, (int)mouseLoc.getX() + xOffset, (int)mouseLoc.getY() + yOffset);
+						this.network.setNewNodeLocation(this.index, (int) mouseLoc.getX() + xOffset, (int) mouseLoc.getY() + yOffset);
 					}
 				}
 			} else if (this.mode == Mode.AddConnection) {
@@ -251,6 +253,11 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 			}
 
 			if (evnt.getID() == MouseEvent.MOUSE_RELEASED) {
+				if(this.nodeWasDragged) {
+					this.nodeWasDragged = false;
+					System.out.println("Node Drag End and Released");
+					this.network.changeNodeLocation(this.index, (int)mouseLoc.getX(), (int)mouseLoc.getY(), (int)this.mousePressLocation.getX(), (int)this.mousePressLocation.getY());
+				}
 				this.offsetPoint = null;
 			}
 		} else if (this.mode == Mode.AddNode) {
@@ -314,7 +321,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 			if (evnt.getID() == MouseEvent.MOUSE_PRESSED) {
 				this.mousePressLocation = mouseLoc;
 				if (this.mousePressLocation.getX() == this.rotationCenter.getX() && this.mousePressLocation.getY() == this.rotationCenter.getY()) {
-					this.mousePressLocation = new Point((int)this.mousePressLocation.getX() + 1, (int)this.mousePressLocation.getY() + 1);
+					this.mousePressLocation = new Point((int) this.mousePressLocation.getX() + 1, (int) this.mousePressLocation.getY() + 1);
 				}
 			}
 			if (evnt.getID() == MouseEvent.MOUSE_RELEASED) {
@@ -438,7 +445,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		this.graphics = g;
 		Graphics2D g2d = (Graphics2D) g;
 		AffineTransform t = new AffineTransform(this.transform);
-		if(this.tempTransform != null) {
+		if (this.tempTransform != null) {
 			t.concatenate(tempTransform);
 		}
 		g2d.transform(t);
@@ -467,7 +474,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 
 		if (this.mode == Mode.Rotate) {
 			g2d.setColor(Color.ORANGE);
-			g2d.drawRect((int)this.rotationCenter.getX(), (int)this.rotationCenter.getY(), 3, 3);
+			g2d.drawRect((int) this.rotationCenter.getX(), (int) this.rotationCenter.getY(), 3, 3);
 		}
 
 		if (this.dragToLocation != null && connectionFirstNode != null) {

@@ -9,6 +9,8 @@ package network;
  *
  * @author Leckie Gunter
  */
-public interface TransformShape {
-	
+public interface CommandObj {
+	public void _do();
+	public void _undo();
 }
+
