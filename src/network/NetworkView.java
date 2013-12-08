@@ -49,7 +49,6 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 	/*---- ROTATE MODE VARIABLES ----*/
 	private Point2D firstClick;
 	private Point2D rotationCenter;
-	private AffineTransform transform;
 	private AffineTransform tempTransform;
 	/*---- GLOBAL VARIABLES ----*/
 	private Graphics graphics;
@@ -64,7 +63,6 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		this.textLocation = -1;
 		this.graphics = null;
 
-		transform = new AffineTransform();
 		tempTransform = null;
 
 		this.network.addNetworkViewListener(this);
@@ -319,7 +317,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 			if (evnt.getID() == MouseEvent.MOUSE_RELEASED) {
 				this.mousePressLocation = null;
 				if (this.tempTransform != null) {
-					this.transform.concatenate(this.tempTransform);
+					this.network.addTransform(this.tempTransform);
 					this.tempTransform = null;
 				}
 			}
@@ -330,7 +328,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 
 		Point2D tempPoint = mouseLoc;
 		try {
-			tempPoint = this.transform.inverseTransform(mouseLoc, null);
+			tempPoint = this.network.transform.inverseTransform(mouseLoc, null);
 		} catch (NoninvertibleTransformException ex) {
 			Logger.getLogger(NetworkView.class.getName()).log(Level.SEVERE, null, ex);
 		}
@@ -339,7 +337,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 
 	private void resetTransformations() {
 		this.setSize();
-		this.transform = new AffineTransform();
+		this.network.resetTransform();
 		//clear the stack of transformations.
 	}
 
@@ -436,7 +434,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 
 		this.graphics = g;
 		Graphics2D g2d = (Graphics2D) g;
-		AffineTransform t = new AffineTransform(this.transform);
+		AffineTransform t = new AffineTransform(this.network.transform);
 		if (this.tempTransform != null) {
 			t.concatenate(tempTransform);
 		}

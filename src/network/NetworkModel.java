@@ -5,6 +5,7 @@
 package network;
 
 import java.awt.Point;
+import java.awt.geom.AffineTransform;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -39,6 +40,7 @@ public class NetworkModel {
 	Timer timer;
 	NameChangeTimerTask task = null;
 	String oldNodeName;
+	AffineTransform transform = new AffineTransform();
 
 	/**
 	 * Creates an empty network model that has a unique default file name and no
@@ -56,6 +58,7 @@ public class NetworkModel {
 		this.oldNodeName = "";
 		this.timer = new Timer();
 		this.task = null;
+		this.transform = new AffineTransform();
 	}
 
 	/**
@@ -72,10 +75,23 @@ public class NetworkModel {
 			controllerListeners.get(i).updateEditMenuButtons();
 		}
 	}
+
 	private void resetTextIndex() {
 		for (int i = 0; i < networkListeners.size(); i++) {
 			networkListeners.get(i).resetTextIndex();
 		}
+	}
+
+	public void addTransform(AffineTransform t) {
+		AffineTransform newTransform = new AffineTransform(this.transform);
+		newTransform.concatenate(t);
+		CommandObj command = new RotateScaleCommand(this.transform, newTransform, this);
+		addNewCommand(command);
+	}
+
+	public void resetTransform() {
+		CommandObj command = new RotateScaleCommand(this.transform, new AffineTransform(), this);
+		addNewCommand(command);
 	}
 
 	public void setNewNodeLocation(int index, int x, int y) {
@@ -428,7 +444,7 @@ public class NetworkModel {
 	 * @param newConnection
 	 */
 	public void addConnection(NetworkConnection newConnection) {
-		if(construction_mode){
+		if (construction_mode) {
 			this.connections.add(newConnection);
 		} else {
 			CommandObj command = new NewConnectionCommand(newConnection, this);
