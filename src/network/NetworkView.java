@@ -103,7 +103,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 	public void updateView() {
 		this.repaint();
 	}
-	
+
 	@Override
 	public void resetTextIndex() {
 		this.textLocation = -1;
@@ -142,7 +142,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 			if (this.textLocation > 0) {
 				String nodeName = this.network.getNode(this.index).getName();
 				String newNodeName = new StringBuilder(nodeName).deleteCharAt(this.textLocation - 1).toString();
-				
+
 				this.network.setNodeName(index, nodeName, newNodeName);
 				//this.network.getNode(index).setName(newNodeName);
 				this.textLocation--;
@@ -156,7 +156,7 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		try {
 			String nodeName = this.network.getNode(this.index).getName();
 			String newNodeName = new StringBuilder(nodeName).insert(this.textLocation, character).toString();
-			
+
 			this.network.setNodeName(index, nodeName, newNodeName);
 			//this.network.getNode(index).setName(newNodeName);
 			this.textLocation++;
@@ -245,10 +245,10 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 			}
 
 			if (evnt.getID() == MouseEvent.MOUSE_RELEASED) {
-				if(this.nodeWasDragged) {
+				if (this.nodeWasDragged) {
 					this.nodeWasDragged = false;
 					System.out.println("Node Drag End and Released");
-					this.network.changeNodeLocation(this.index, (int)mouseLoc.getX(), (int)mouseLoc.getY(), (int)this.mousePressLocation.getX(), (int)this.mousePressLocation.getY());
+					this.network.changeNodeLocation(this.index, (int) mouseLoc.getX() + xOffset, (int) mouseLoc.getY() + yOffset, (int) this.mousePressLocation.getX() + xOffset, (int) this.mousePressLocation.getY() + yOffset);
 				}
 				this.offsetPoint = null;
 			}
