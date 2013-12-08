@@ -428,8 +428,13 @@ public class NetworkModel {
 	 * @param newConnection
 	 */
 	public void addConnection(NetworkConnection newConnection) {
+		if(construction_mode){
+			this.connections.add(newConnection);
+		} else {
+			CommandObj command = new NewConnectionCommand(newConnection, this);
+			addNewCommand(command);
+		}
 		this.changesSaved = false;
-		this.connections.add(newConnection);
 		this.update();
 	}
 

@@ -10,13 +10,25 @@ package network;
  */
 public class NewConnectionCommand implements CommandObj {
 
+	private int connectionIndex;
+	private NetworkConnection connection;
+	private NetworkModel model;
+
+	public NewConnectionCommand(NetworkConnection connection, NetworkModel network) {
+		this.connection = connection;
+		this.model = network;
+		this.connectionIndex = network.nConnections();
+	}
+
 	@Override
 	public void _do() {
-		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+		System.out.println("New Connection DO/ Redo. Index: " + model.nConnections());
+		model.connections.add(connection);
 	}
 
 	@Override
 	public void _undo() {
-		throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+		System.out.println("New Connection Undo: " + connectionIndex);
+		model.connections.remove(connectionIndex);
 	}
 }
