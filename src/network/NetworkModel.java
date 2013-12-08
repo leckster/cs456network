@@ -16,6 +16,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.Stack;
+import java.util.Timer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import network.NetworkConnection.Side;
@@ -35,6 +36,9 @@ public class NetworkModel {
 	String filename;
 	boolean changesSaved;
 	boolean construction_mode = false;
+	Timer timer;
+	NameChangeTimerTask task = null;
+	String oldNodeName;
 
 	/**
 	 * Creates an empty network model that has a unique default file name and no
@@ -49,6 +53,9 @@ public class NetworkModel {
 		this.done_actions = new Stack();
 		this.undone_actions = new Stack();
 		this.changesSaved = true;
+		this.oldNodeName = "";
+		this.timer = new Timer();
+		this.task = null;
 	}
 
 	/**
@@ -65,17 +72,57 @@ public class NetworkModel {
 			controllerListeners.get(i).updateEditMenuButtons();
 		}
 	}
+	private void resetTextIndex() {
+		for (int i = 0; i < networkListeners.size(); i++) {
+			networkListeners.get(i).resetTextIndex();
+		}
+	}
 
 	public void setNewNodeLocation(int index, int x, int y) {
 		this.changesSaved = false;
 		this.nodes.get(index).setLocation(x, y);
 	}
 
+	void setNodeName(int index, String oldNodeName, String newNodeName) throws Exception {
+		if (this.task == null) {
+			this.oldNodeName = oldNodeName;
+			this.task = new NameChangeTimerTask(this.oldNodeName, newNodeName, index, this);
+		} else {
+			System.out.println("Task Canceled, new Task set");
+			this.task.cancel();
+			this.task = new NameChangeTimerTask(this.oldNodeName, newNodeName, index, this);
+		}
+		this.timer.schedule(this.task, 2000);
+		for (int i = 0; i < this.nConnections(); i++) {
+			NetworkConnection conn = this.getConnection(i);
+			if (conn.getNodeOne().equals(oldNodeName)) {
+				conn.setNodeOne(newNodeName);
+			}
+			if (conn.getNodeTwo().equals(newNodeName)) {
+				conn.setNodeTwo(newNodeName);
+			}
+		}
+		this.getNode(index).setName(newNodeName);
+	}
+
+	public void addNameChangeCommand(String oldName, String newName, int index) {
+		System.out.println("Name Change Command Added");
+		this.task = null;
+		CommandObj command = new ChangeNodeNameCommand(oldName, newName, index, this);
+		addNewCommand(command);
+		resetTextIndex();
+	}
+
 	public void changeNodeLocation(int index, int newX, int newY, int oldX, int oldY) {
 		CommandObj command = new MoveNodeCommand(this, index, new Point(newX, newY), new Point(oldX, oldY));
+		addNewCommand(command);
+	}
+
+	private void addNewCommand(CommandObj command) {
 		command._do();
 		this.done_actions.push(command);
 		this.undone_actions.clear();
+		this.changesSaved = false;
 		this.update();
 	}
 
@@ -168,6 +215,7 @@ public class NetworkModel {
 	 * @param fileName the name of the file to be read.
 	 */
 	public NetworkModel(String fileName) throws Exception {
+		this.timer = new Timer();
 
 		this.nodes = new ArrayList<>();
 		this.connections = new ArrayList<>();
@@ -322,9 +370,7 @@ public class NetworkModel {
 			this.nodes.add(newNode);
 		} else {
 			CommandObj command = new NewNodeCommand(newNode, this);
-			command._do();
-			this.done_actions.push(command);
-			this.undone_actions.clear();
+			addNewCommand(command);
 		}
 		this.changesSaved = false;
 		this.update();
@@ -399,9 +445,9 @@ public class NetworkModel {
 	 *
 	 * @param i index of the desired object. Must be less than nConnections()
 	 */
-	public NetworkConnection getConnection(int i) throws Exception {
+	public NetworkConnection getConnection(int i) {
 		if (i >= this.connections.size() || i < 0) {
-			throw new Exception();
+			//throw new Exception();
 		}
 		return this.connections.get(i);
 	}

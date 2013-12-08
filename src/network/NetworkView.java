@@ -103,6 +103,12 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 	public void updateView() {
 		this.repaint();
 	}
+	
+	@Override
+	public void resetTextIndex() {
+		this.textLocation = -1;
+		this.repaint();
+	}
 
 	@Override
 	public void processKeyEvent(KeyEvent evnt) {
@@ -136,16 +142,9 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 			if (this.textLocation > 0) {
 				String nodeName = this.network.getNode(this.index).getName();
 				String newNodeName = new StringBuilder(nodeName).deleteCharAt(this.textLocation - 1).toString();
-				for (int i = 0; i < this.network.nConnections(); i++) {
-					NetworkConnection conn = this.network.getConnection(i);
-					if (conn.getNodeOne().equals(nodeName)) {
-						conn.setNodeOne(newNodeName);
-					}
-					if (conn.getNodeTwo().equals(nodeName)) {
-						conn.setNodeTwo(newNodeName);
-					}
-				}
-				this.network.getNode(index).setName(newNodeName);
+				
+				this.network.setNodeName(index, nodeName, newNodeName);
+				//this.network.getNode(index).setName(newNodeName);
 				this.textLocation--;
 			}
 		} catch (Exception ex) {
@@ -157,16 +156,9 @@ public class NetworkView extends JPanel implements NetworkViewInterface {
 		try {
 			String nodeName = this.network.getNode(this.index).getName();
 			String newNodeName = new StringBuilder(nodeName).insert(this.textLocation, character).toString();
-			for (int i = 0; i < this.network.nConnections(); i++) {
-				NetworkConnection conn = this.network.getConnection(i);
-				if (conn.getNodeOne().equals(nodeName)) {
-					conn.setNodeOne(newNodeName);
-				}
-				if (conn.getNodeTwo().equals(nodeName)) {
-					conn.setNodeTwo(newNodeName);
-				}
-			}
-			this.network.getNode(index).setName(newNodeName);
+			
+			this.network.setNodeName(index, nodeName, newNodeName);
+			//this.network.getNode(index).setName(newNodeName);
 			this.textLocation++;
 
 		} catch (Exception ex) {

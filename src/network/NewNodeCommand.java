@@ -22,14 +22,13 @@ public class NewNodeCommand implements CommandObj {
 
 	@Override
 	public void _do() {
-		System.out.println("New Node DO/ Redo");
-		nodeIndex = model.nNodes();
+		System.out.println("New Node DO/ Redo. Index: " + model.nNodes());
 		model.nodes.add(node);
 	}
 
 	@Override
 	public void _undo() {
-		System.out.println("New Node Undo");
+		System.out.println("New Node Undo: " + nodeIndex);
 		model.nodes.remove(nodeIndex);
 	}
 }

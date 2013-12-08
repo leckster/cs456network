@@ -10,4 +10,5 @@ package network;
  */
 interface NetworkViewInterface {
 	public void updateView();
+	public void resetTextIndex();
 }
